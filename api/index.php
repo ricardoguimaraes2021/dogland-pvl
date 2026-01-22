@@ -74,6 +74,17 @@ function assert_enum(string $value, array $allowed, string $field): void {
     }
 }
 
+function to_number($value, bool $allowNull = true) {
+    if ($value === null || $value === '') {
+        return $allowNull ? null : 0;
+    }
+    $normalized = str_replace(',', '.', (string)$value);
+    if (!is_numeric($normalized)) {
+        respond(['error' => 'Valor numerico invalido'], 400);
+    }
+    return (float)$normalized;
+}
+
 try {
     $pdo = db_connect($config['db']);
 } catch (Throwable $e) {
@@ -136,6 +147,9 @@ if ($path === '/racoes' && $method === 'POST') {
     if ($missing) respond(['error' => 'Campos obrigatorios em falta', 'fields' => $missing], 400);
     assert_enum($data['ativo'], ['SIM', 'NÃO'], 'ativo');
     try {
+        $pesoKg = to_number($data['pesoKg'], false);
+        $precoVenda = to_number($data['precoVenda'], false);
+        $stockMin = (int)to_number($data['stockMin'], false);
         $stmt = $pdo->prepare('INSERT INTO racoes (sku, nome, marca, variante, peso_kg, fornecedor, preco_venda, stock_minimo, ativo)
                                VALUES (:sku, :nome, :marca, :variante, :peso_kg, :fornecedor, :preco_venda, :stock_minimo, :ativo)');
         $stmt->execute([
@@ -143,10 +157,10 @@ if ($path === '/racoes' && $method === 'POST') {
             ':nome' => $data['nome'] ?? '',
             ':marca' => $data['marca'] ?? '',
             ':variante' => $data['variante'] ?? null,
-            ':peso_kg' => $data['pesoKg'] ?? 0,
+            ':peso_kg' => $pesoKg,
             ':fornecedor' => $data['fornecedor'] ?? null,
-            ':preco_venda' => $data['precoVenda'] ?? 0,
-            ':stock_minimo' => $data['stockMin'] ?? 0,
+            ':preco_venda' => $precoVenda,
+            ':stock_minimo' => $stockMin,
             ':ativo' => $data['ativo'] ?? 'SIM',
         ]);
         respond(['status' => 'ok', 'id' => $pdo->lastInsertId()], 201);
@@ -162,6 +176,9 @@ if ($parts[0] === 'racoes' && isset($parts[1]) && $method === 'PUT') {
     if ($missing) respond(['error' => 'Campos obrigatorios em falta', 'fields' => $missing], 400);
     assert_enum($data['ativo'], ['SIM', 'NÃO'], 'ativo');
     try {
+        $pesoKg = to_number($data['pesoKg'], false);
+        $precoVenda = to_number($data['precoVenda'], false);
+        $stockMin = (int)to_number($data['stockMin'], false);
         $stmt = $pdo->prepare('UPDATE racoes SET sku = :sku, nome = :nome, marca = :marca, variante = :variante, peso_kg = :peso_kg,
                                fornecedor = :fornecedor, preco_venda = :preco_venda, stock_minimo = :stock_minimo, ativo = :ativo
                                WHERE id = :id');
@@ -170,10 +187,10 @@ if ($parts[0] === 'racoes' && isset($parts[1]) && $method === 'PUT') {
             ':nome' => $data['nome'] ?? '',
             ':marca' => $data['marca'] ?? '',
             ':variante' => $data['variante'] ?? null,
-            ':peso_kg' => $data['pesoKg'] ?? 0,
+            ':peso_kg' => $pesoKg,
             ':fornecedor' => $data['fornecedor'] ?? null,
-            ':preco_venda' => $data['precoVenda'] ?? 0,
-            ':stock_minimo' => $data['stockMin'] ?? 0,
+            ':preco_venda' => $precoVenda,
+            ':stock_minimo' => $stockMin,
             ':ativo' => $data['ativo'] ?? 'SIM',
             ':id' => $id,
         ]);
@@ -200,11 +217,14 @@ if ($path === '/movimentos' && $method === 'POST') {
     if ($missing) respond(['error' => 'Campos obrigatorios em falta', 'fields' => $missing], 400);
     assert_enum($data['tipo'], ['ENTRADA', 'SAÍDA'], 'tipo');
     assert_enum($data['motivo'], ['COMPRA', 'VENDA', 'CONSUMO_CASA', 'AJUSTE'], 'motivo');
-    if ((int)($data['qtd'] ?? 0) <= 0) respond(['error' => 'Quantidade invalida'], 400);
-    if ($data['tipo'] === 'ENTRADA' && $data['motivo'] === 'COMPRA' && ($data['custo'] ?? null) === null) {
+    $qtd = (int)to_number($data['qtd'], false);
+    if ($qtd <= 0) respond(['error' => 'Quantidade invalida'], 400);
+    $custo = to_number($data['custo'] ?? null, true);
+    $precoVenda = to_number($data['precoVenda'] ?? null, true);
+    if ($data['tipo'] === 'ENTRADA' && $data['motivo'] === 'COMPRA' && $custo === null) {
         respond(['error' => 'Custo unitario obrigatorio para compras'], 400);
     }
-    if ($data['tipo'] === 'SAÍDA' && $data['motivo'] === 'VENDA' && ($data['precoVenda'] ?? null) === null) {
+    if ($data['tipo'] === 'SAÍDA' && $data['motivo'] === 'VENDA' && $precoVenda === null) {
         respond(['error' => 'Preco de venda obrigatorio para vendas'], 400);
     }
     $stmt = $pdo->prepare('SELECT id FROM racoes WHERE sku = :sku');
@@ -222,9 +242,9 @@ if ($path === '/movimentos' && $method === 'POST') {
             ':tipo' => $data['tipo'] ?? 'ENTRADA',
             ':motivo' => $data['motivo'] ?? 'COMPRA',
             ':racao_id' => $racao['id'],
-            ':qtd_sacos' => (int)($data['qtd'] ?? 0),
-            ':custo_unitario' => $data['custo'] ?? null,
-            ':preco_venda_unitario' => $data['precoVenda'] ?? null,
+            ':qtd_sacos' => $qtd,
+            ':custo_unitario' => $custo,
+            ':preco_venda_unitario' => $precoVenda,
             ':observacoes' => $data['observacoes'] ?? null,
         ]);
 
@@ -241,11 +261,14 @@ if ($parts[0] === 'movimentos' && isset($parts[1]) && $method === 'PUT') {
     if ($missing) respond(['error' => 'Campos obrigatorios em falta', 'fields' => $missing], 400);
     assert_enum($data['tipo'], ['ENTRADA', 'SAÍDA'], 'tipo');
     assert_enum($data['motivo'], ['COMPRA', 'VENDA', 'CONSUMO_CASA', 'AJUSTE'], 'motivo');
-    if ((int)($data['qtd'] ?? 0) <= 0) respond(['error' => 'Quantidade invalida'], 400);
-    if ($data['tipo'] === 'ENTRADA' && $data['motivo'] === 'COMPRA' && ($data['custo'] ?? null) === null) {
+    $qtd = (int)to_number($data['qtd'], false);
+    if ($qtd <= 0) respond(['error' => 'Quantidade invalida'], 400);
+    $custo = to_number($data['custo'] ?? null, true);
+    $precoVenda = to_number($data['precoVenda'] ?? null, true);
+    if ($data['tipo'] === 'ENTRADA' && $data['motivo'] === 'COMPRA' && $custo === null) {
         respond(['error' => 'Custo unitario obrigatorio para compras'], 400);
     }
-    if ($data['tipo'] === 'SAÍDA' && $data['motivo'] === 'VENDA' && ($data['precoVenda'] ?? null) === null) {
+    if ($data['tipo'] === 'SAÍDA' && $data['motivo'] === 'VENDA' && $precoVenda === null) {
         respond(['error' => 'Preco de venda obrigatorio para vendas'], 400);
     }
     $stmt = $pdo->prepare('SELECT id FROM racoes WHERE sku = :sku');
@@ -264,9 +287,9 @@ if ($parts[0] === 'movimentos' && isset($parts[1]) && $method === 'PUT') {
             ':tipo' => $data['tipo'] ?? 'ENTRADA',
             ':motivo' => $data['motivo'] ?? 'COMPRA',
             ':racao_id' => $racao['id'],
-            ':qtd_sacos' => (int)($data['qtd'] ?? 0),
-            ':custo_unitario' => $data['custo'] ?? null,
-            ':preco_venda_unitario' => $data['precoVenda'] ?? null,
+            ':qtd_sacos' => $qtd,
+            ':custo_unitario' => $custo,
+            ':preco_venda_unitario' => $precoVenda,
             ':observacoes' => $data['observacoes'] ?? null,
             ':id' => $id,
         ]);

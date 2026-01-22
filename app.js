@@ -22,6 +22,13 @@ const fmtDate = (iso) => new Date(iso).toLocaleDateString("pt-PT");
 
 const byId = (id) => document.getElementById(id);
 
+const parseNumber = (value) => {
+  if (value === null || value === undefined || value === "") return null;
+  const normalized = String(value).replace(",", ".");
+  const num = Number(normalized);
+  return Number.isNaN(num) ? null : num;
+};
+
 const ui = {
   valorStock: byId("kpi-valor-stock"),
   totalVendas: byId("kpi-total-vendas"),
@@ -226,6 +233,7 @@ function openModal(title, fields, onSubmit) {
     input.name = field.name;
     input.required = field.required ?? true;
     if (field.type !== "select") input.type = field.type || "text";
+    if (field.step && field.type === "number") input.step = field.step;
     if (field.options) {
       field.options.forEach((opt) => {
         const option = document.createElement("option");
@@ -279,14 +287,21 @@ ui.btnNovaRacao.addEventListener("click", () => {
     { label: "Nome", name: "nome" },
     { label: "Marca", name: "marca" },
     { label: "Variante/Sabor", name: "variante", required: false },
-    { label: "Peso (kg)", name: "pesoKg", type: "number" },
+    { label: "Peso (kg)", name: "pesoKg", type: "number", step: "0.1" },
     { label: "Fornecedor", name: "fornecedor", required: false },
-    { label: "Preço venda (€)", name: "precoVenda", type: "number" },
+    { label: "Preço venda (€)", name: "precoVenda", type: "number", step: "0.01" },
     { label: "Stock mínimo", name: "stockMin", type: "number" },
     { label: "Ativo", name: "ativo", type: "select", options: ["SIM", "NÃO"] },
   ], (data) => {
     if (!data.sku || !data.nome || !data.marca) {
       alert("Preenche SKU, Nome e Marca.");
+      return;
+    }
+    const pesoKg = parseNumber(data.pesoKg);
+    const precoVenda = parseNumber(data.precoVenda);
+    const stockMin = parseNumber(data.stockMin);
+    if (pesoKg === null || precoVenda === null || stockMin === null) {
+      alert("Valores numéricos inválidos (usa 29.50 ou 29,50).");
       return;
     }
     apiRequest("/racoes", {
@@ -296,10 +311,10 @@ ui.btnNovaRacao.addEventListener("click", () => {
         nome: data.nome,
         marca: data.marca,
         variante: data.variante || null,
-        pesoKg: Number(data.pesoKg || 0),
+        pesoKg,
         fornecedor: data.fornecedor || null,
-        precoVenda: Number(data.precoVenda || 0),
-        stockMin: Number(data.stockMin || 0),
+        precoVenda,
+        stockMin,
         ativo: data.ativo,
       }),
     })
@@ -316,8 +331,8 @@ ui.btnNovoMovimento.addEventListener("click", () => {
     { label: "Motivo", name: "motivo", type: "select", options: ["COMPRA", "VENDA", "CONSUMO_CASA", "AJUSTE"] },
     { label: "SKU", name: "sku" },
     { label: "Quantidade", name: "qtd", type: "number" },
-    { label: "Custo unitário (€)", name: "custo", type: "number", required: false },
-    { label: "Preço venda (€)", name: "precoVenda", type: "number", required: false },
+    { label: "Custo unitário (€)", name: "custo", type: "number", step: "0.01", required: false },
+    { label: "Preço venda (€)", name: "precoVenda", type: "number", step: "0.01", required: false },
     { label: "Observações", name: "observacoes", required: false },
   ], (data) => {
     if (!data.data || !data.sku || !data.qtd) {
@@ -336,6 +351,8 @@ ui.btnNovoMovimento.addEventListener("click", () => {
       alert("Preço de venda é obrigatório para vendas.");
       return;
     }
+    const custo = parseNumber(data.custo);
+    const precoVenda = parseNumber(data.precoVenda);
     apiRequest("/movimentos", {
       method: "POST",
       body: JSON.stringify({
@@ -344,8 +361,8 @@ ui.btnNovoMovimento.addEventListener("click", () => {
         motivo: data.motivo,
         sku: data.sku,
         qtd: Number(data.qtd || 0),
-        custo: data.custo ? Number(data.custo) : null,
-        precoVenda: data.precoVenda ? Number(data.precoVenda) : null,
+        custo: custo === null ? null : custo,
+        precoVenda: precoVenda === null ? null : precoVenda,
         observacoes: data.observacoes || null,
       }),
     })
@@ -377,14 +394,21 @@ ui.racoesTable.addEventListener("click", (event) => {
       { label: "Nome", name: "nome", value: racao.nome },
       { label: "Marca", name: "marca", value: racao.marca },
       { label: "Variante/Sabor", name: "variante", required: false, value: racao.variante },
-      { label: "Peso (kg)", name: "pesoKg", type: "number", value: racao.pesoKg },
+      { label: "Peso (kg)", name: "pesoKg", type: "number", step: "0.1", value: racao.pesoKg },
       { label: "Fornecedor", name: "fornecedor", required: false, value: racao.fornecedor },
-      { label: "Preço venda (€)", name: "precoVenda", type: "number", value: racao.precoVenda },
+      { label: "Preço venda (€)", name: "precoVenda", type: "number", step: "0.01", value: racao.precoVenda },
       { label: "Stock mínimo", name: "stockMin", type: "number", value: racao.stockMin },
       { label: "Ativo", name: "ativo", type: "select", options: ["SIM", "NÃO"], value: racao.ativo },
     ], (data) => {
       if (!data.sku || !data.nome || !data.marca) {
         alert("Preenche SKU, Nome e Marca.");
+        return;
+      }
+      const pesoKg = parseNumber(data.pesoKg);
+      const precoVenda = parseNumber(data.precoVenda);
+      const stockMin = parseNumber(data.stockMin);
+      if (pesoKg === null || precoVenda === null || stockMin === null) {
+        alert("Valores numéricos inválidos (usa 29.50 ou 29,50).");
         return;
       }
       apiRequest(`/racoes/${id}`, {
@@ -394,10 +418,10 @@ ui.racoesTable.addEventListener("click", (event) => {
           nome: data.nome,
           marca: data.marca,
           variante: data.variante || null,
-          pesoKg: Number(data.pesoKg || 0),
+          pesoKg,
           fornecedor: data.fornecedor || null,
-          precoVenda: Number(data.precoVenda || 0),
-          stockMin: Number(data.stockMin || 0),
+          precoVenda,
+          stockMin,
           ativo: data.ativo,
         }),
       })
@@ -431,8 +455,8 @@ ui.movimentosTable.addEventListener("click", (event) => {
       { label: "Motivo", name: "motivo", type: "select", options: ["COMPRA", "VENDA", "CONSUMO_CASA", "AJUSTE"], value: movimento.motivo },
       { label: "SKU", name: "sku", value: movimento.sku },
       { label: "Quantidade", name: "qtd", type: "number", value: movimento.qtd },
-      { label: "Custo unitário (€)", name: "custo", type: "number", required: false, value: movimento.custo ?? "" },
-      { label: "Preço venda (€)", name: "precoVenda", type: "number", required: false, value: movimento.precoVenda ?? "" },
+      { label: "Custo unitário (€)", name: "custo", type: "number", step: "0.01", required: false, value: movimento.custo ?? "" },
+      { label: "Preço venda (€)", name: "precoVenda", type: "number", step: "0.01", required: false, value: movimento.precoVenda ?? "" },
       { label: "Observações", name: "observacoes", required: false, value: movimento.observacoes },
     ], (data) => {
       if (!data.data || !data.sku || !data.qtd) {
@@ -451,6 +475,8 @@ ui.movimentosTable.addEventListener("click", (event) => {
         alert("Preço de venda é obrigatório para vendas.");
         return;
       }
+      const custo = parseNumber(data.custo);
+      const precoVenda = parseNumber(data.precoVenda);
       apiRequest(`/movimentos/${id}`, {
         method: "PUT",
         body: JSON.stringify({
@@ -459,8 +485,8 @@ ui.movimentosTable.addEventListener("click", (event) => {
           motivo: data.motivo,
           sku: data.sku,
           qtd: Number(data.qtd || 0),
-          custo: data.custo ? Number(data.custo) : null,
-          precoVenda: data.precoVenda ? Number(data.precoVenda) : null,
+          custo: custo === null ? null : custo,
+          precoVenda: precoVenda === null ? null : precoVenda,
           observacoes: data.observacoes || null,
         }),
       })
