@@ -148,10 +148,11 @@ if ($path === '/racoes' && $method === 'POST') {
     assert_enum($data['ativo'], ['SIM', 'NÃO'], 'ativo');
     try {
         $pesoKg = to_number($data['pesoKg'], false);
+        $precoCompra = to_number($data['precoCompra'] ?? null, true);
         $precoVenda = to_number($data['precoVenda'], false);
         $stockMin = (int)to_number($data['stockMin'], false);
-        $stmt = $pdo->prepare('INSERT INTO racoes (sku, nome, marca, variante, peso_kg, fornecedor, preco_venda, stock_minimo, ativo)
-                               VALUES (:sku, :nome, :marca, :variante, :peso_kg, :fornecedor, :preco_venda, :stock_minimo, :ativo)');
+        $stmt = $pdo->prepare('INSERT INTO racoes (sku, nome, marca, variante, peso_kg, fornecedor, preco_compra, preco_venda, stock_minimo, ativo)
+                               VALUES (:sku, :nome, :marca, :variante, :peso_kg, :fornecedor, :preco_compra, :preco_venda, :stock_minimo, :ativo)');
         $stmt->execute([
             ':sku' => $data['sku'] ?? '',
             ':nome' => $data['nome'] ?? '',
@@ -159,6 +160,7 @@ if ($path === '/racoes' && $method === 'POST') {
             ':variante' => $data['variante'] ?? null,
             ':peso_kg' => $pesoKg,
             ':fornecedor' => $data['fornecedor'] ?? null,
+            ':preco_compra' => $precoCompra,
             ':preco_venda' => $precoVenda,
             ':stock_minimo' => $stockMin,
             ':ativo' => $data['ativo'] ?? 'SIM',
@@ -177,10 +179,11 @@ if ($parts[0] === 'racoes' && isset($parts[1]) && $method === 'PUT') {
     assert_enum($data['ativo'], ['SIM', 'NÃO'], 'ativo');
     try {
         $pesoKg = to_number($data['pesoKg'], false);
+        $precoCompra = to_number($data['precoCompra'] ?? null, true);
         $precoVenda = to_number($data['precoVenda'], false);
         $stockMin = (int)to_number($data['stockMin'], false);
         $stmt = $pdo->prepare('UPDATE racoes SET sku = :sku, nome = :nome, marca = :marca, variante = :variante, peso_kg = :peso_kg,
-                               fornecedor = :fornecedor, preco_venda = :preco_venda, stock_minimo = :stock_minimo, ativo = :ativo
+                               fornecedor = :fornecedor, preco_compra = :preco_compra, preco_venda = :preco_venda, stock_minimo = :stock_minimo, ativo = :ativo
                                WHERE id = :id');
         $stmt->execute([
             ':sku' => $data['sku'] ?? '',
@@ -189,6 +192,7 @@ if ($parts[0] === 'racoes' && isset($parts[1]) && $method === 'PUT') {
             ':variante' => $data['variante'] ?? null,
             ':peso_kg' => $pesoKg,
             ':fornecedor' => $data['fornecedor'] ?? null,
+            ':preco_compra' => $precoCompra,
             ':preco_venda' => $precoVenda,
             ':stock_minimo' => $stockMin,
             ':ativo' => $data['ativo'] ?? 'SIM',

@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS racoes (
   variante VARCHAR(80) NULL,
   peso_kg DECIMAL(6,2) NOT NULL,
   fornecedor VARCHAR(120) NULL,
+  preco_compra DECIMAL(10,2) NULL,
   preco_venda DECIMAL(10,2) NOT NULL,
   stock_minimo INT NOT NULL DEFAULT 0,
   ativo ENUM('SIM','NÃO') NOT NULL DEFAULT 'SIM',
@@ -53,6 +54,7 @@ SELECT
   r.variante,
   r.peso_kg,
   r.fornecedor,
+  r.preco_compra,
   r.preco_venda,
   r.stock_minimo,
   r.ativo,
@@ -63,14 +65,16 @@ SELECT
   ) AS stock_atual,
   -- Custo médio ponderado apenas de compras (entradas)
   CASE
-    WHEN SUM(CASE WHEN m.tipo = 'ENTRADA' AND m.motivo = 'COMPRA' THEN m.qtd_sacos ELSE 0 END) = 0 THEN NULL
+    WHEN SUM(CASE WHEN m.tipo = 'ENTRADA' AND m.motivo = 'COMPRA' THEN m.qtd_sacos ELSE 0 END) = 0 THEN COALESCE(r.preco_compra, 0)
     ELSE
       SUM(CASE WHEN m.tipo = 'ENTRADA' AND m.motivo = 'COMPRA' THEN m.qtd_sacos * m.custo_unitario ELSE 0 END) /
       SUM(CASE WHEN m.tipo = 'ENTRADA' AND m.motivo = 'COMPRA' THEN m.qtd_sacos ELSE 0 END)
   END AS custo_medio,
   -- Valor em stock (custo)
   (CASE
-    WHEN SUM(CASE WHEN m.tipo = 'ENTRADA' AND m.motivo = 'COMPRA' THEN m.qtd_sacos ELSE 0 END) = 0 THEN 0
+    WHEN SUM(CASE WHEN m.tipo = 'ENTRADA' AND m.motivo = 'COMPRA' THEN m.qtd_sacos ELSE 0 END) = 0
+      THEN (SUM(CASE WHEN m.tipo = 'ENTRADA' THEN m.qtd_sacos ELSE 0 END) -
+            SUM(CASE WHEN m.tipo = 'SAÍDA' THEN m.qtd_sacos ELSE 0 END)) * COALESCE(r.preco_compra, 0)
     ELSE
       (SUM(CASE WHEN m.tipo = 'ENTRADA' THEN m.qtd_sacos ELSE 0 END) -
        SUM(CASE WHEN m.tipo = 'SAÍDA' THEN m.qtd_sacos ELSE 0 END)) *

@@ -67,11 +67,11 @@ const ui = {
 
 const sampleData = {
   racoes: [
-    { id: 1, sku: "RAC-001", nome: "Exclusive Fish 3kg", marca: "Royal Canin", pesoKg: 3, precoVenda: 29.9, stockMin: 3, stockAtual: 12, alerta: "OK" },
-    { id: 2, sku: "RAC-002", nome: "Junior 12kg", marca: "Royal Canin", pesoKg: 12, precoVenda: 79.9, stockMin: 2, stockAtual: 4, alerta: "OK" },
-    { id: 3, sku: "RAC-003", nome: "Fish 12kg", marca: "Royal Canin", pesoKg: 12, precoVenda: 74.9, stockMin: 2, stockAtual: 1, alerta: "BAIXO" },
-    { id: 4, sku: "RAC-004", nome: "Duck 12kg", marca: "Royal Canin", pesoKg: 12, precoVenda: 79.9, stockMin: 2, stockAtual: 3, alerta: "OK" },
-    { id: 5, sku: "RAC-005", nome: "Natsbi", marca: "Natsbi", pesoKg: 15, precoVenda: 89.9, stockMin: 1, stockAtual: 0, alerta: "BAIXO" },
+    { id: 1, sku: "RAC-001", nome: "Exclusive Fish 3kg", marca: "Royal Canin", pesoKg: 3, precoCompra: 18.5, precoVenda: 29.9, stockMin: 3, stockAtual: 12, alerta: "OK" },
+    { id: 2, sku: "RAC-002", nome: "Junior 12kg", marca: "Royal Canin", pesoKg: 12, precoCompra: 49.0, precoVenda: 79.9, stockMin: 2, stockAtual: 4, alerta: "OK" },
+    { id: 3, sku: "RAC-003", nome: "Fish 12kg", marca: "Royal Canin", pesoKg: 12, precoCompra: 45.0, precoVenda: 74.9, stockMin: 2, stockAtual: 1, alerta: "BAIXO" },
+    { id: 4, sku: "RAC-004", nome: "Duck 12kg", marca: "Royal Canin", pesoKg: 12, precoCompra: 48.0, precoVenda: 79.9, stockMin: 2, stockAtual: 3, alerta: "OK" },
+    { id: 5, sku: "RAC-005", nome: "Natsbi", marca: "Natsbi", pesoKg: 15, precoCompra: 60.0, precoVenda: 89.9, stockMin: 1, stockAtual: 0, alerta: "BAIXO" },
   ],
   movimentos: [
     { id: 1, data: "2024-01-02", tipo: "ENTRADA", motivo: "COMPRA", sku: "RAC-001", qtd: 10, custo: 20, precoVenda: null, observacoes: "Stock inicial" },
@@ -139,6 +139,7 @@ function racaoRow(row) {
     <span>${row.nome}</span>
     <span>${row.marca}</span>
     <span>${row.pesoKg} kg</span>
+    <span>${row.precoCompra ? fmtCurrency.format(row.precoCompra) : "—"}</span>
     <span>${fmtCurrency.format(row.precoVenda)}</span>
     <span>${row.stockAtual}</span>
     <span class="pill" style="background:${row.alerta === "BAIXO" ? "rgba(231,76,60,0.15)" : "rgba(39,174,96,0.15)"};color:${row.alerta === "BAIXO" ? "#c0392b" : "#1e8449"}">${row.alerta}</span>
@@ -205,6 +206,7 @@ async function loadData() {
       nome: r.nome,
       marca: r.marca,
       pesoKg: Number(r.peso_kg || 0),
+      precoCompra: r.preco_compra === null ? null : Number(r.preco_compra),
       precoVenda: Number(r.preco_venda || 0),
       stockMin: Number(r.stock_minimo || 0),
       stockAtual: Number(r.stock_atual || 0),
@@ -496,6 +498,7 @@ ui.btnNovaRacao.addEventListener("click", () => {
     { label: "Variante/Sabor", name: "variante", required: false },
     { label: "Peso (kg)", name: "pesoKg", type: "number", step: "0.1" },
     { label: "Fornecedor", name: "fornecedor", required: false },
+    { label: "Preço compra (€)", name: "precoCompra", type: "decimal", required: false },
     { label: "Preço venda (€)", name: "precoVenda", type: "decimal" },
     { label: "Stock mínimo", name: "stockMin", type: "number" },
     { label: "Ativo", name: "ativo", type: "select", options: ["SIM", "NÃO"] },
@@ -505,6 +508,7 @@ ui.btnNovaRacao.addEventListener("click", () => {
       return;
     }
     const pesoKg = parseNumber(data.pesoKg);
+    const precoCompra = parseNumber(data.precoCompra);
     const precoVenda = parseNumber(data.precoVenda);
     const stockMin = parseNumber(data.stockMin);
     if (pesoKg === null || precoVenda === null || stockMin === null) {
@@ -520,6 +524,7 @@ ui.btnNovaRacao.addEventListener("click", () => {
         variante: data.variante || null,
         pesoKg,
         fornecedor: data.fornecedor || null,
+        precoCompra,
         precoVenda,
         stockMin,
         ativo: data.ativo,
@@ -533,10 +538,30 @@ ui.btnNovaRacao.addEventListener("click", () => {
 
 ui.btnNovoMovimento.addEventListener("click", () => {
   const produtoOptions = state.racoes.map((r) => `${r.sku} — ${r.nome}`);
+  const syncMovementPricing = () => {
+    const tipoInput = ui.modalBody.querySelector('[name="tipo"]');
+    const motivoInput = ui.modalBody.querySelector('[name="motivo"]');
+    const skuInput = ui.modalBody.querySelector('[name="sku"]');
+    const custoInput = ui.modalBody.querySelector('[name="custo"]');
+    const precoInput = ui.modalBody.querySelector('[name="precoVenda"]');
+    if (!tipoInput || !motivoInput || !skuInput) return;
+    const racao = state.racoes.find((r) => r.sku === skuInput.value);
+    if (!racao) return;
+    if (tipoInput.value === "ENTRADA" && motivoInput.value === "COMPRA") {
+      if (custoInput && !custoInput.value && racao.precoCompra != null) {
+        custoInput.value = racao.precoCompra;
+      }
+    }
+    if (tipoInput.value === "SAÍDA" && motivoInput.value === "VENDA") {
+      if (precoInput && !precoInput.value && racao.precoVenda != null) {
+        precoInput.value = racao.precoVenda;
+      }
+    }
+  };
   openModal("Novo movimento", [
     { label: "Data", name: "data", type: "date" },
-    { label: "Tipo", name: "tipo", type: "select", options: ["ENTRADA", "SAÍDA"] },
-    { label: "Motivo", name: "motivo", type: "select", options: ["COMPRA", "VENDA", "CONSUMO_CASA", "AJUSTE"] },
+    { label: "Tipo", name: "tipo", type: "select", options: ["ENTRADA", "SAÍDA"], onChange: syncMovementPricing },
+    { label: "Motivo", name: "motivo", type: "select", options: ["COMPRA", "VENDA", "CONSUMO_CASA", "AJUSTE"], onChange: syncMovementPricing },
     {
       label: "Produto",
       name: "produto",
@@ -547,6 +572,7 @@ ui.btnNovoMovimento.addEventListener("click", () => {
         const sku = value.includes("—") ? value.split("—")[0].trim() : "";
         const skuInput = ui.modalBody.querySelector('[name="sku"]');
         if (skuInput) skuInput.value = sku;
+        syncMovementPricing();
       },
     },
     { label: "SKU", name: "sku", readonly: true },
@@ -616,6 +642,7 @@ ui.racoesTable.addEventListener("click", (event) => {
       { label: "Variante/Sabor", name: "variante", required: false, value: racao.variante },
       { label: "Peso (kg)", name: "pesoKg", type: "number", step: "0.1", value: racao.pesoKg },
       { label: "Fornecedor", name: "fornecedor", required: false, value: racao.fornecedor },
+      { label: "Preço compra (€)", name: "precoCompra", type: "decimal", required: false, value: racao.precoCompra ?? "" },
       { label: "Preço venda (€)", name: "precoVenda", type: "decimal", value: racao.precoVenda },
       { label: "Stock mínimo", name: "stockMin", type: "number", value: racao.stockMin },
       { label: "Ativo", name: "ativo", type: "select", options: ["SIM", "NÃO"], value: racao.ativo },
@@ -625,6 +652,7 @@ ui.racoesTable.addEventListener("click", (event) => {
         return;
       }
       const pesoKg = parseNumber(data.pesoKg);
+      const precoCompra = parseNumber(data.precoCompra);
       const precoVenda = parseNumber(data.precoVenda);
       const stockMin = parseNumber(data.stockMin);
       if (pesoKg === null || precoVenda === null || stockMin === null) {
@@ -640,6 +668,7 @@ ui.racoesTable.addEventListener("click", (event) => {
           variante: data.variante || null,
           pesoKg,
           fornecedor: data.fornecedor || null,
+          precoCompra,
           precoVenda,
           stockMin,
           ativo: data.ativo,
@@ -675,10 +704,30 @@ ui.movimentosTable.addEventListener("click", (event) => {
       ? `${movimento.sku} — ${nomeAtual}`
       : "Selecione...";
     const options = currentProduto === "Selecione..." ? ["Selecione...", ...produtoOptions] : [currentProduto, ...produtoOptions];
+    const syncMovementPricing = () => {
+      const tipoInput = ui.modalBody.querySelector('[name="tipo"]');
+      const motivoInput = ui.modalBody.querySelector('[name="motivo"]');
+      const skuInput = ui.modalBody.querySelector('[name="sku"]');
+      const custoInput = ui.modalBody.querySelector('[name="custo"]');
+      const precoInput = ui.modalBody.querySelector('[name="precoVenda"]');
+      if (!tipoInput || !motivoInput || !skuInput) return;
+      const racao = state.racoes.find((r) => r.sku === skuInput.value);
+      if (!racao) return;
+      if (tipoInput.value === "ENTRADA" && motivoInput.value === "COMPRA") {
+        if (custoInput && !custoInput.value && racao.precoCompra != null) {
+          custoInput.value = racao.precoCompra;
+        }
+      }
+      if (tipoInput.value === "SAÍDA" && motivoInput.value === "VENDA") {
+        if (precoInput && !precoInput.value && racao.precoVenda != null) {
+          precoInput.value = racao.precoVenda;
+        }
+      }
+    };
     openModal("Editar movimento", [
       { label: "Data", name: "data", type: "date", value: movimento.data },
-      { label: "Tipo", name: "tipo", type: "select", options: ["ENTRADA", "SAÍDA"], value: movimento.tipo },
-      { label: "Motivo", name: "motivo", type: "select", options: ["COMPRA", "VENDA", "CONSUMO_CASA", "AJUSTE"], value: movimento.motivo },
+      { label: "Tipo", name: "tipo", type: "select", options: ["ENTRADA", "SAÍDA"], value: movimento.tipo, onChange: syncMovementPricing },
+      { label: "Motivo", name: "motivo", type: "select", options: ["COMPRA", "VENDA", "CONSUMO_CASA", "AJUSTE"], value: movimento.motivo, onChange: syncMovementPricing },
       {
         label: "Produto",
         name: "produto",
@@ -690,6 +739,7 @@ ui.movimentosTable.addEventListener("click", (event) => {
           const sku = value.includes("—") ? value.split("—")[0].trim() : "";
           const skuInput = ui.modalBody.querySelector('[name="sku"]');
           if (skuInput) skuInput.value = sku;
+          syncMovementPricing();
         },
       },
       { label: "SKU", name: "sku", value: movimento.sku, readonly: true },
