@@ -135,6 +135,10 @@ p {
   display: none;
 }
 
+.section.is-collapsed > :not(.section__header) {
+  display: none;
+}
+
 .cards {
   display: grid;
   gap: 18px;

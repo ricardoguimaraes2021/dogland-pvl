@@ -477,19 +477,16 @@ document.querySelectorAll(".section__toggle").forEach((btn) => {
     const target = document.querySelector(btn.dataset.target);
     if (!target) return;
     const content = target.querySelector(".section__content");
-    if (!content) return;
-    const collapsed = content.classList.toggle("is-collapsed");
+    let collapsed = false;
+    if (content) {
+      collapsed = content.classList.toggle("is-collapsed");
+    } else {
+      collapsed = target.classList.toggle("is-collapsed");
+    }
     btn.textContent = collapsed ? "Expandir" : "Minimizar";
   });
 });
 
-document.querySelectorAll("[data-action]").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const action = btn.dataset.action;
-    if (action === "quick-mov" && ui.btnNovoMovimento) ui.btnNovoMovimento.click();
-    if (action === "quick-racao" && ui.btnNovaRacao) ui.btnNovaRacao.click();
-  });
-});
 
 ui.btnNovaRacao.addEventListener("click", () => {
   openModal("Nova ração", [
