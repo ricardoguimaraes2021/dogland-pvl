@@ -40,6 +40,7 @@ const ui = {
   restockTable: byId("restock-table"),
   racoesTable: byId("racoes-table"),
   movimentosTable: byId("movimentos-table"),
+  stockTable: byId("stock-table"),
   modal: byId("modal-form"),
   modalTitle: byId("modal-title"),
   modalBody: byId("modal-body"),
@@ -100,6 +101,17 @@ function renderTable(container, rows, templateFn) {
   container.innerHTML = "";
   if (header) container.appendChild(header);
   rows.forEach((row) => container.appendChild(templateFn(row)));
+}
+
+function stockRow(row) {
+  const el = document.createElement("div");
+  el.className = "table__row";
+  el.innerHTML = `
+    <span>${row.nome}</span>
+    <span>${row.sku}</span>
+    <span>${row.stockAtual}</span>
+  `;
+  return el;
 }
 
 function restockRow(row) {
@@ -233,8 +245,15 @@ function render() {
   setMetrics(getDashboardMetrics());
   const restock = state.racoes.filter((r) => r.alerta === "BAIXO");
   renderTable(ui.restockTable, restock, restockRow);
+  renderTable(ui.stockTable, getStockList(), stockRow);
   renderTable(ui.racoesTable, getFilteredRacoes(), racaoRow);
   renderTable(ui.movimentosTable, getFilteredMovimentos(), movimentoRow);
+}
+
+function getStockList() {
+  return [...state.racoes]
+    .filter((r) => r.ativo === "SIM")
+    .sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
 }
 
 function getDashboardMetrics() {
