@@ -104,9 +104,16 @@ GROUP BY r.id;
 -- View para dashboard
 CREATE OR REPLACE VIEW vw_dashboard AS
 SELECT
-  COALESCE(SUM(valor_em_stock_custo), 0) AS valor_em_stock,
-  COALESCE(SUM(CASE WHEN m.tipo = 'ENTRADA' AND m.motivo = 'COMPRA' THEN m.qtd_sacos * m.custo_unitario ELSE 0 END), 0) AS total_compras,
-  COALESCE(SUM(CASE WHEN m.tipo = 'SAÍDA' AND m.motivo = 'VENDA' THEN m.qtd_sacos * m.preco_venda_unitario ELSE 0 END), 0) AS total_vendas,
-  COALESCE(SUM(lucro_total), 0) AS lucro_estimado
-FROM vw_racoes_metricas vr
-LEFT JOIN movimentos m ON m.racao_id = vr.id;
+  COALESCE(SUM(vr.valor_em_stock_custo), 0) AS valor_em_stock,
+  COALESCE((
+      SELECT SUM(m.qtd_sacos * m.custo_unitario)
+      FROM movimentos m
+      WHERE m.tipo = 'ENTRADA' AND m.motivo = 'COMPRA'
+  ), 0) AS total_compras,
+  COALESCE((
+      SELECT SUM(m.qtd_sacos * m.preco_venda_unitario)
+      FROM movimentos m
+      WHERE m.tipo = 'SAÍDA' AND m.motivo = 'VENDA'
+  ), 0) AS total_vendas,
+  COALESCE(SUM(vr.lucro_total), 0) AS lucro_estimado
+FROM vw_racoes_metricas vr;
