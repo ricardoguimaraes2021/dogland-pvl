@@ -82,17 +82,17 @@ const sampleData = {
 };
 
 function setMetrics(metrics) {
-  ui.valorStock.textContent = fmtCurrency.format(metrics.valorStock || 0);
-  ui.totalVendas.textContent = fmtCurrency.format(metrics.totalVendas || 0);
-  ui.lucro.textContent = fmtCurrency.format(metrics.lucro || 0);
-  ui.cardValorStock.textContent = fmtCurrency.format(metrics.valorStock || 0);
-  ui.cardTotalCompras.textContent = fmtCurrency.format(metrics.totalCompras || 0);
-  ui.cardConsumo.textContent = `${metrics.consumoQtd || 0} sacos`;
+  if (ui.valorStock) ui.valorStock.textContent = fmtCurrency.format(metrics.valorStock || 0);
+  if (ui.totalVendas) ui.totalVendas.textContent = fmtCurrency.format(metrics.totalVendas || 0);
+  if (ui.lucro) ui.lucro.textContent = fmtCurrency.format(metrics.lucro || 0);
+  if (ui.cardValorStock) ui.cardValorStock.textContent = fmtCurrency.format(metrics.valorStock || 0);
+  if (ui.cardTotalCompras) ui.cardTotalCompras.textContent = fmtCurrency.format(metrics.totalCompras || 0);
+  if (ui.cardConsumo) ui.cardConsumo.textContent = `${metrics.consumoQtd || 0} sacos`;
   if (ui.cardConsumoHint) {
     const custo = metrics.consumoCusto || 0;
     ui.cardConsumoHint.textContent = `SAÍDA + VENDA/CONSUMO_CASA · ~${fmtCurrency.format(custo)}`;
   }
-  ui.lastUpdated.textContent = metrics.lastUpdated ? fmtDate(metrics.lastUpdated) : "--";
+  if (ui.lastUpdated) ui.lastUpdated.textContent = metrics.lastUpdated ? fmtDate(metrics.lastUpdated) : "--";
 }
 
 function renderTable(container, rows, templateFn) {
