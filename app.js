@@ -47,6 +47,12 @@ const ui = {
   modalClose: byId("modal-close"),
   btnNovaRacao: byId("btn-nova-racao"),
   btnNovoMovimento: byId("btn-novo-movimento"),
+  filtroRacoesTexto: byId("filtro-racoes-texto"),
+  filtroMovTexto: byId("filtro-movimentos-texto"),
+  filtroMovTipo: byId("filtro-movimentos-tipo"),
+  filtroMovMotivo: byId("filtro-movimentos-motivo"),
+  filtroMovDe: byId("filtro-movimentos-de"),
+  filtroMovAte: byId("filtro-movimentos-ate"),
 };
 
 const sampleData = {
@@ -217,8 +223,45 @@ function render() {
   setMetrics(state.metrics);
   const restock = state.racoes.filter((r) => r.alerta === "BAIXO");
   renderTable(ui.restockTable, restock, restockRow);
-  renderTable(ui.racoesTable, state.racoes, racaoRow);
-  renderTable(ui.movimentosTable, state.movimentos, movimentoRow);
+  renderTable(ui.racoesTable, getFilteredRacoes(), racaoRow);
+  renderTable(ui.movimentosTable, getFilteredMovimentos(), movimentoRow);
+}
+
+function getFilteredRacoes() {
+  const texto = (ui.filtroRacoesTexto?.value || "").trim().toLowerCase();
+  if (!texto) return state.racoes;
+  return state.racoes.filter((r) => {
+    const sku = (r.sku || "").toLowerCase();
+    const nome = (r.nome || "").toLowerCase();
+    return sku.includes(texto) || nome.includes(texto);
+  });
+}
+
+function getFilteredMovimentos() {
+  const texto = (ui.filtroMovTexto?.value || "").trim().toLowerCase();
+  const tipo = ui.filtroMovTipo?.value || "";
+  const motivo = ui.filtroMovMotivo?.value || "";
+  const de = ui.filtroMovDe?.value ? new Date(ui.filtroMovDe.value) : null;
+  const ate = ui.filtroMovAte?.value ? new Date(ui.filtroMovAte.value) : null;
+
+  return state.movimentos.filter((m) => {
+    if (tipo && m.tipo !== tipo) return false;
+    if (motivo && m.motivo !== motivo) return false;
+
+    if (de || ate) {
+      const data = new Date(m.data);
+      if (de && data < de) return false;
+      if (ate && data > ate) return false;
+    }
+
+    if (texto) {
+      const sku = (m.sku || "").toLowerCase();
+      const nome = (state.racoes.find((r) => r.sku === m.sku)?.nome || "").toLowerCase();
+      if (!sku.includes(texto) && !nome.includes(texto)) return false;
+    }
+
+    return true;
+  });
 }
 
 function openModal(title, fields, onSubmit) {
@@ -291,6 +334,20 @@ document.querySelectorAll("[data-scroll]").forEach((btn) => {
     const target = document.querySelector(btn.dataset.scroll);
     if (target) target.scrollIntoView({ behavior: "smooth" });
   });
+});
+
+const filterInputs = [
+  ui.filtroRacoesTexto,
+  ui.filtroMovTexto,
+  ui.filtroMovTipo,
+  ui.filtroMovMotivo,
+  ui.filtroMovDe,
+  ui.filtroMovAte,
+];
+filterInputs.forEach((input) => {
+  if (!input) return;
+  input.addEventListener("input", () => render());
+  input.addEventListener("change", () => render());
 });
 
 ui.btnNovaRacao.addEventListener("click", () => {

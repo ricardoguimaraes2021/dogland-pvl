@@ -95,6 +95,12 @@
         </div>
         <button class="btn btn--primary" id="btn-nova-racao">Nova ração</button>
       </div>
+      <div class="filters">
+        <div class="field">
+          <label for="filtro-racoes-texto">Pesquisa (SKU ou nome)</label>
+          <input id="filtro-racoes-texto" type="text" placeholder="Ex: GOSBI, 8437..." />
+        </div>
+      </div>
       <div class="panel">
         <div class="table" id="racoes-table">
           <div class="table__row table__row--header">
@@ -118,6 +124,38 @@
           <h2>Movimentos</h2>
         </div>
         <button class="btn btn--ghost" id="btn-novo-movimento">Novo movimento</button>
+      </div>
+      <div class="filters">
+        <div class="field">
+          <label for="filtro-movimentos-texto">Pesquisa (SKU ou produto)</label>
+          <input id="filtro-movimentos-texto" type="text" placeholder="Ex: Junior, 8437..." />
+        </div>
+        <div class="field">
+          <label for="filtro-movimentos-tipo">Tipo</label>
+          <select id="filtro-movimentos-tipo">
+            <option value="">Todos</option>
+            <option value="ENTRADA">ENTRADA</option>
+            <option value="SAÍDA">SAÍDA</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="filtro-movimentos-motivo">Motivo</label>
+          <select id="filtro-movimentos-motivo">
+            <option value="">Todos</option>
+            <option value="COMPRA">COMPRA</option>
+            <option value="VENDA">VENDA</option>
+            <option value="CONSUMO_CASA">CONSUMO_CASA</option>
+            <option value="AJUSTE">AJUSTE</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="filtro-movimentos-de">De</label>
+          <input id="filtro-movimentos-de" type="date" />
+        </div>
+        <div class="field">
+          <label for="filtro-movimentos-ate">Até</label>
+          <input id="filtro-movimentos-ate" type="date" />
+        </div>
       </div>
       <div class="panel">
         <div class="table" id="movimentos-table">

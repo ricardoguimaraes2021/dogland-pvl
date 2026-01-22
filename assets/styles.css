@@ -155,6 +155,13 @@ p {
   box-shadow: var(--shadow);
 }
 
+.filters {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  margin-bottom: 16px;
+}
+
 .panel__header {
   display: flex;
   align-items: center;
