@@ -58,6 +58,22 @@ function route_parts(): array {
     return $path === '/' ? [''] : explode('/', ltrim($path, '/'));
 }
 
+function require_fields(array $data, array $fields): array {
+    $missing = [];
+    foreach ($fields as $field) {
+        if (!isset($data[$field]) || $data[$field] === '') {
+            $missing[] = $field;
+        }
+    }
+    return $missing;
+}
+
+function assert_enum(string $value, array $allowed, string $field): void {
+    if (!in_array($value, $allowed, true)) {
+        respond(['error' => "Campo invalido: {$field}"], 400);
+    }
+}
+
 try {
     $pdo = db_connect($config['db']);
 } catch (Throwable $e) {
@@ -87,12 +103,24 @@ if ($parts[0] === 'racoes' && isset($parts[1]) && $method === 'GET') {
 }
 
 if ($path === '/movimentos' && $method === 'GET') {
-    $stmt = $pdo->query('SELECT m.id, m.data_movimento, m.tipo, m.motivo, r.sku, m.qtd_sacos, m.custo_unitario, m.preco_venda_unitario
+    $stmt = $pdo->query('SELECT m.id, m.data_movimento, m.tipo, m.motivo, r.sku, m.qtd_sacos, m.custo_unitario, m.preco_venda_unitario, m.observacoes
                          FROM movimentos m
                          JOIN racoes r ON r.id = m.racao_id
                          ORDER BY m.data_movimento DESC, m.id DESC
                          LIMIT 200');
     respond($stmt->fetchAll());
+}
+
+if ($parts[0] === 'movimentos' && isset($parts[1]) && $method === 'GET') {
+    $id = (int)$parts[1];
+    $stmt = $pdo->prepare('SELECT m.id, m.data_movimento, m.tipo, m.motivo, r.sku, m.qtd_sacos, m.custo_unitario, m.preco_venda_unitario, m.observacoes
+                           FROM movimentos m
+                           JOIN racoes r ON r.id = m.racao_id
+                           WHERE m.id = :id');
+    $stmt->execute([':id' => $id]);
+    $row = $stmt->fetch();
+    if (!$row) respond(['error' => 'Movimento nao encontrado'], 404);
+    respond($row);
 }
 
 if ($path === '/dashboard' && $method === 'GET') {
@@ -104,6 +132,9 @@ if ($path === '/dashboard' && $method === 'GET') {
 
 if ($path === '/racoes' && $method === 'POST') {
     $data = json_body();
+    $missing = require_fields($data, ['sku', 'nome', 'marca', 'pesoKg', 'precoVenda', 'stockMin', 'ativo']);
+    if ($missing) respond(['error' => 'Campos obrigatorios em falta', 'fields' => $missing], 400);
+    assert_enum($data['ativo'], ['SIM', 'NÃO'], 'ativo');
     try {
         $stmt = $pdo->prepare('INSERT INTO racoes (sku, nome, marca, variante, peso_kg, fornecedor, preco_venda, stock_minimo, ativo)
                                VALUES (:sku, :nome, :marca, :variante, :peso_kg, :fornecedor, :preco_venda, :stock_minimo, :ativo)');
@@ -127,6 +158,9 @@ if ($path === '/racoes' && $method === 'POST') {
 if ($parts[0] === 'racoes' && isset($parts[1]) && $method === 'PUT') {
     $id = (int)$parts[1];
     $data = json_body();
+    $missing = require_fields($data, ['sku', 'nome', 'marca', 'pesoKg', 'precoVenda', 'stockMin', 'ativo']);
+    if ($missing) respond(['error' => 'Campos obrigatorios em falta', 'fields' => $missing], 400);
+    assert_enum($data['ativo'], ['SIM', 'NÃO'], 'ativo');
     try {
         $stmt = $pdo->prepare('UPDATE racoes SET sku = :sku, nome = :nome, marca = :marca, variante = :variante, peso_kg = :peso_kg,
                                fornecedor = :fornecedor, preco_venda = :preco_venda, stock_minimo = :stock_minimo, ativo = :ativo
@@ -162,6 +196,17 @@ if ($parts[0] === 'racoes' && isset($parts[1]) && $method === 'DELETE') {
 
 if ($path === '/movimentos' && $method === 'POST') {
     $data = json_body();
+    $missing = require_fields($data, ['data', 'tipo', 'motivo', 'sku', 'qtd']);
+    if ($missing) respond(['error' => 'Campos obrigatorios em falta', 'fields' => $missing], 400);
+    assert_enum($data['tipo'], ['ENTRADA', 'SAÍDA'], 'tipo');
+    assert_enum($data['motivo'], ['COMPRA', 'VENDA', 'CONSUMO_CASA', 'AJUSTE'], 'motivo');
+    if ((int)($data['qtd'] ?? 0) <= 0) respond(['error' => 'Quantidade invalida'], 400);
+    if ($data['tipo'] === 'ENTRADA' && $data['motivo'] === 'COMPRA' && ($data['custo'] ?? null) === null) {
+        respond(['error' => 'Custo unitario obrigatorio para compras'], 400);
+    }
+    if ($data['tipo'] === 'SAÍDA' && $data['motivo'] === 'VENDA' && ($data['precoVenda'] ?? null) === null) {
+        respond(['error' => 'Preco de venda obrigatorio para vendas'], 400);
+    }
     $stmt = $pdo->prepare('SELECT id FROM racoes WHERE sku = :sku');
     $stmt->execute([':sku' => $data['sku'] ?? '']);
     $racao = $stmt->fetch();
@@ -186,6 +231,59 @@ if ($path === '/movimentos' && $method === 'POST') {
         respond(['status' => 'ok', 'id' => $pdo->lastInsertId()], 201);
     } catch (Throwable $e) {
         respond(['error' => 'Nao foi possivel criar o movimento', 'details' => $e->getMessage()], 400);
+    }
+}
+
+if ($parts[0] === 'movimentos' && isset($parts[1]) && $method === 'PUT') {
+    $id = (int)$parts[1];
+    $data = json_body();
+    $missing = require_fields($data, ['data', 'tipo', 'motivo', 'sku', 'qtd']);
+    if ($missing) respond(['error' => 'Campos obrigatorios em falta', 'fields' => $missing], 400);
+    assert_enum($data['tipo'], ['ENTRADA', 'SAÍDA'], 'tipo');
+    assert_enum($data['motivo'], ['COMPRA', 'VENDA', 'CONSUMO_CASA', 'AJUSTE'], 'motivo');
+    if ((int)($data['qtd'] ?? 0) <= 0) respond(['error' => 'Quantidade invalida'], 400);
+    if ($data['tipo'] === 'ENTRADA' && $data['motivo'] === 'COMPRA' && ($data['custo'] ?? null) === null) {
+        respond(['error' => 'Custo unitario obrigatorio para compras'], 400);
+    }
+    if ($data['tipo'] === 'SAÍDA' && $data['motivo'] === 'VENDA' && ($data['precoVenda'] ?? null) === null) {
+        respond(['error' => 'Preco de venda obrigatorio para vendas'], 400);
+    }
+    $stmt = $pdo->prepare('SELECT id FROM racoes WHERE sku = :sku');
+    $stmt->execute([':sku' => $data['sku'] ?? '']);
+    $racao = $stmt->fetch();
+    if (!$racao) {
+        respond(['error' => 'SKU inválido'], 400);
+    }
+
+    try {
+        $stmt = $pdo->prepare('UPDATE movimentos SET data_movimento = :data_movimento, tipo = :tipo, motivo = :motivo, racao_id = :racao_id,
+                               qtd_sacos = :qtd_sacos, custo_unitario = :custo_unitario, preco_venda_unitario = :preco_venda_unitario, observacoes = :observacoes
+                               WHERE id = :id');
+        $stmt->execute([
+            ':data_movimento' => $data['data'] ?? date('Y-m-d'),
+            ':tipo' => $data['tipo'] ?? 'ENTRADA',
+            ':motivo' => $data['motivo'] ?? 'COMPRA',
+            ':racao_id' => $racao['id'],
+            ':qtd_sacos' => (int)($data['qtd'] ?? 0),
+            ':custo_unitario' => $data['custo'] ?? null,
+            ':preco_venda_unitario' => $data['precoVenda'] ?? null,
+            ':observacoes' => $data['observacoes'] ?? null,
+            ':id' => $id,
+        ]);
+        respond(['status' => 'ok']);
+    } catch (Throwable $e) {
+        respond(['error' => 'Nao foi possivel atualizar o movimento', 'details' => $e->getMessage()], 400);
+    }
+}
+
+if ($parts[0] === 'movimentos' && isset($parts[1]) && $method === 'DELETE') {
+    $id = (int)$parts[1];
+    try {
+        $stmt = $pdo->prepare('DELETE FROM movimentos WHERE id = :id');
+        $stmt->execute([':id' => $id]);
+        respond(['status' => 'ok']);
+    } catch (Throwable $e) {
+        respond(['error' => 'Nao foi possivel apagar o movimento', 'details' => $e->getMessage()], 400);
     }
 }
 

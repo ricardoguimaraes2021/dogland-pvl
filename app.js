@@ -51,9 +51,9 @@ const sampleData = {
     { id: 5, sku: "RAC-005", nome: "Natsbi", marca: "Natsbi", pesoKg: 15, precoVenda: 89.9, stockMin: 1, stockAtual: 0, alerta: "BAIXO" },
   ],
   movimentos: [
-    { data: "2024-01-02", tipo: "ENTRADA", motivo: "COMPRA", sku: "RAC-001", qtd: 10, custo: 20, precoVenda: null },
-    { data: "2024-01-10", tipo: "SAÍDA", motivo: "VENDA", sku: "RAC-001", qtd: 2, custo: null, precoVenda: 29.9 },
-    { data: "2024-01-15", tipo: "SAÍDA", motivo: "VENDA", sku: "RAC-005", qtd: 2, custo: null, precoVenda: 89.9 },
+    { id: 1, data: "2024-01-02", tipo: "ENTRADA", motivo: "COMPRA", sku: "RAC-001", qtd: 10, custo: 20, precoVenda: null, observacoes: "Stock inicial" },
+    { id: 2, data: "2024-01-10", tipo: "SAÍDA", motivo: "VENDA", sku: "RAC-001", qtd: 2, custo: null, precoVenda: 29.9, observacoes: "" },
+    { id: 3, data: "2024-01-15", tipo: "SAÍDA", motivo: "VENDA", sku: "RAC-005", qtd: 2, custo: null, precoVenda: 89.9, observacoes: "" },
   ],
   metrics: {
     valorStock: 1245.5,
@@ -124,6 +124,10 @@ function movimentoRow(row) {
     <span>${row.qtd}</span>
     <span>${row.custo ? fmtCurrency.format(row.custo) : "—"}</span>
     <span>${row.precoVenda ? fmtCurrency.format(row.precoVenda) : "—"}</span>
+    <span class="actions">
+      <button class="btn btn--ghost btn--sm" data-action="edit-mov" data-id="${row.id}">Editar</button>
+      <button class="btn btn--ghost btn--sm" data-action="delete-mov" data-id="${row.id}">Apagar</button>
+    </span>
   `;
   return el;
 }
@@ -174,6 +178,7 @@ async function loadData() {
     }));
 
     state.movimentos = movimentos.map((m) => ({
+      id: m.id,
       data: m.data_movimento,
       tipo: m.tipo,
       motivo: m.motivo,
@@ -181,6 +186,7 @@ async function loadData() {
       qtd: Number(m.qtd_sacos || 0),
       custo: m.custo_unitario === null ? null : Number(m.custo_unitario),
       precoVenda: m.preco_venda_unitario === null ? null : Number(m.preco_venda_unitario),
+      observacoes: m.observacoes || "",
     }));
 
     state.metrics = {
@@ -279,6 +285,10 @@ ui.btnNovaRacao.addEventListener("click", () => {
     { label: "Stock mínimo", name: "stockMin", type: "number" },
     { label: "Ativo", name: "ativo", type: "select", options: ["SIM", "NÃO"] },
   ], (data) => {
+    if (!data.sku || !data.nome || !data.marca) {
+      alert("Preenche SKU, Nome e Marca.");
+      return;
+    }
     apiRequest("/racoes", {
       method: "POST",
       body: JSON.stringify({
@@ -310,6 +320,22 @@ ui.btnNovoMovimento.addEventListener("click", () => {
     { label: "Preço venda (€)", name: "precoVenda", type: "number", required: false },
     { label: "Observações", name: "observacoes", required: false },
   ], (data) => {
+    if (!data.data || !data.sku || !data.qtd) {
+      alert("Preenche Data, SKU e Quantidade.");
+      return;
+    }
+    if (Number(data.qtd) <= 0) {
+      alert("Quantidade deve ser maior que zero.");
+      return;
+    }
+    if (data.tipo === "ENTRADA" && data.motivo === "COMPRA" && !data.custo) {
+      alert("Custo unitário é obrigatório para compras.");
+      return;
+    }
+    if (data.tipo === "SAÍDA" && data.motivo === "VENDA" && !data.precoVenda) {
+      alert("Preço de venda é obrigatório para vendas.");
+      return;
+    }
     apiRequest("/movimentos", {
       method: "POST",
       body: JSON.stringify({
@@ -357,6 +383,10 @@ ui.racoesTable.addEventListener("click", (event) => {
       { label: "Stock mínimo", name: "stockMin", type: "number", value: racao.stockMin },
       { label: "Ativo", name: "ativo", type: "select", options: ["SIM", "NÃO"], value: racao.ativo },
     ], (data) => {
+      if (!data.sku || !data.nome || !data.marca) {
+        alert("Preenche SKU, Nome e Marca.");
+        return;
+      }
       apiRequest(`/racoes/${id}`, {
         method: "PUT",
         body: JSON.stringify({
@@ -369,6 +399,69 @@ ui.racoesTable.addEventListener("click", (event) => {
           precoVenda: Number(data.precoVenda || 0),
           stockMin: Number(data.stockMin || 0),
           ativo: data.ativo,
+        }),
+      })
+        .then(() => loadData())
+        .then(() => closeModal())
+        .catch((err) => alert(err.message));
+    });
+  }
+});
+
+ui.movimentosTable.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-action]");
+  if (!button) return;
+  const action = button.dataset.action;
+  const id = Number(button.dataset.id);
+  const movimento = state.movimentos.find((m) => m.id === id);
+  if (!movimento) return;
+
+  if (action === "delete-mov") {
+    if (!confirm("Apagar este movimento?")) return;
+    apiRequest(`/movimentos/${id}`, { method: "DELETE" })
+      .then(() => loadData())
+      .catch((err) => alert(err.message));
+    return;
+  }
+
+  if (action === "edit-mov") {
+    openModal("Editar movimento", [
+      { label: "Data", name: "data", type: "date", value: movimento.data },
+      { label: "Tipo", name: "tipo", type: "select", options: ["ENTRADA", "SAÍDA"], value: movimento.tipo },
+      { label: "Motivo", name: "motivo", type: "select", options: ["COMPRA", "VENDA", "CONSUMO_CASA", "AJUSTE"], value: movimento.motivo },
+      { label: "SKU", name: "sku", value: movimento.sku },
+      { label: "Quantidade", name: "qtd", type: "number", value: movimento.qtd },
+      { label: "Custo unitário (€)", name: "custo", type: "number", required: false, value: movimento.custo ?? "" },
+      { label: "Preço venda (€)", name: "precoVenda", type: "number", required: false, value: movimento.precoVenda ?? "" },
+      { label: "Observações", name: "observacoes", required: false, value: movimento.observacoes },
+    ], (data) => {
+      if (!data.data || !data.sku || !data.qtd) {
+        alert("Preenche Data, SKU e Quantidade.");
+        return;
+      }
+      if (Number(data.qtd) <= 0) {
+        alert("Quantidade deve ser maior que zero.");
+        return;
+      }
+      if (data.tipo === "ENTRADA" && data.motivo === "COMPRA" && !data.custo) {
+        alert("Custo unitário é obrigatório para compras.");
+        return;
+      }
+      if (data.tipo === "SAÍDA" && data.motivo === "VENDA" && !data.precoVenda) {
+        alert("Preço de venda é obrigatório para vendas.");
+        return;
+      }
+      apiRequest(`/movimentos/${id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          data: data.data,
+          tipo: data.tipo,
+          motivo: data.motivo,
+          sku: data.sku,
+          qtd: Number(data.qtd || 0),
+          custo: data.custo ? Number(data.custo) : null,
+          precoVenda: data.precoVenda ? Number(data.precoVenda) : null,
+          observacoes: data.observacoes || null,
         }),
       })
         .then(() => loadData())
