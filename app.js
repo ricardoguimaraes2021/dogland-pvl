@@ -232,7 +232,15 @@ function openModal(title, fields, onSubmit) {
     const input = field.type === "select" ? document.createElement("select") : document.createElement("input");
     input.name = field.name;
     input.required = field.required ?? true;
-    if (field.type !== "select") input.type = field.type || "text";
+    if (field.type !== "select") {
+      if (field.type === "decimal") {
+        input.type = "text";
+        input.inputMode = "decimal";
+        input.pattern = "^[0-9]+([,.][0-9]+)?$";
+      } else {
+        input.type = field.type || "text";
+      }
+    }
     if (field.step && field.type === "number") input.step = field.step;
     if (field.options) {
       field.options.forEach((opt) => {
@@ -289,7 +297,7 @@ ui.btnNovaRacao.addEventListener("click", () => {
     { label: "Variante/Sabor", name: "variante", required: false },
     { label: "Peso (kg)", name: "pesoKg", type: "number", step: "0.1" },
     { label: "Fornecedor", name: "fornecedor", required: false },
-    { label: "Preço venda (€)", name: "precoVenda", type: "number", step: "0.01" },
+    { label: "Preço venda (€)", name: "precoVenda", type: "decimal" },
     { label: "Stock mínimo", name: "stockMin", type: "number" },
     { label: "Ativo", name: "ativo", type: "select", options: ["SIM", "NÃO"] },
   ], (data) => {
@@ -331,8 +339,8 @@ ui.btnNovoMovimento.addEventListener("click", () => {
     { label: "Motivo", name: "motivo", type: "select", options: ["COMPRA", "VENDA", "CONSUMO_CASA", "AJUSTE"] },
     { label: "SKU", name: "sku" },
     { label: "Quantidade", name: "qtd", type: "number" },
-    { label: "Custo unitário (€)", name: "custo", type: "number", step: "0.01", required: false },
-    { label: "Preço venda (€)", name: "precoVenda", type: "number", step: "0.01", required: false },
+    { label: "Custo unitário (€)", name: "custo", type: "decimal", required: false },
+    { label: "Preço venda (€)", name: "precoVenda", type: "decimal", required: false },
     { label: "Observações", name: "observacoes", required: false },
   ], (data) => {
     if (!data.data || !data.sku || !data.qtd) {
@@ -396,7 +404,7 @@ ui.racoesTable.addEventListener("click", (event) => {
       { label: "Variante/Sabor", name: "variante", required: false, value: racao.variante },
       { label: "Peso (kg)", name: "pesoKg", type: "number", step: "0.1", value: racao.pesoKg },
       { label: "Fornecedor", name: "fornecedor", required: false, value: racao.fornecedor },
-      { label: "Preço venda (€)", name: "precoVenda", type: "number", step: "0.01", value: racao.precoVenda },
+      { label: "Preço venda (€)", name: "precoVenda", type: "decimal", value: racao.precoVenda },
       { label: "Stock mínimo", name: "stockMin", type: "number", value: racao.stockMin },
       { label: "Ativo", name: "ativo", type: "select", options: ["SIM", "NÃO"], value: racao.ativo },
     ], (data) => {
@@ -455,8 +463,8 @@ ui.movimentosTable.addEventListener("click", (event) => {
       { label: "Motivo", name: "motivo", type: "select", options: ["COMPRA", "VENDA", "CONSUMO_CASA", "AJUSTE"], value: movimento.motivo },
       { label: "SKU", name: "sku", value: movimento.sku },
       { label: "Quantidade", name: "qtd", type: "number", value: movimento.qtd },
-      { label: "Custo unitário (€)", name: "custo", type: "number", step: "0.01", required: false, value: movimento.custo ?? "" },
-      { label: "Preço venda (€)", name: "precoVenda", type: "number", step: "0.01", required: false, value: movimento.precoVenda ?? "" },
+      { label: "Custo unitário (€)", name: "custo", type: "decimal", required: false, value: movimento.custo ?? "" },
+      { label: "Preço venda (€)", name: "precoVenda", type: "decimal", required: false, value: movimento.precoVenda ?? "" },
       { label: "Observações", name: "observacoes", required: false, value: movimento.observacoes },
     ], (data) => {
       if (!data.data || !data.sku || !data.qtd) {
