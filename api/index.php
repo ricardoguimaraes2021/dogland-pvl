@@ -1,7 +1,7 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -53,6 +53,11 @@ function route(): string {
     return '/' . trim($uri, '/');
 }
 
+function route_parts(): array {
+    $path = route();
+    return $path === '/' ? [''] : explode('/', ltrim($path, '/'));
+}
+
 try {
     $pdo = db_connect($config['db']);
 } catch (Throwable $e) {
@@ -60,6 +65,7 @@ try {
 }
 
 $path = route();
+$parts = route_parts();
 $method = $_SERVER['REQUEST_METHOD'];
 
 if ($path === '/' || $path === '/health') {
@@ -69,6 +75,15 @@ if ($path === '/' || $path === '/health') {
 if ($path === '/racoes' && $method === 'GET') {
     $stmt = $pdo->query('SELECT * FROM vw_racoes_metricas ORDER BY nome');
     respond($stmt->fetchAll());
+}
+
+if ($parts[0] === 'racoes' && isset($parts[1]) && $method === 'GET') {
+    $id = (int)$parts[1];
+    $stmt = $pdo->prepare('SELECT * FROM vw_racoes_metricas WHERE id = :id');
+    $stmt->execute([':id' => $id]);
+    $row = $stmt->fetch();
+    if (!$row) respond(['error' => 'Ração não encontrada'], 404);
+    respond($row);
 }
 
 if ($path === '/movimentos' && $method === 'GET') {
@@ -89,20 +104,60 @@ if ($path === '/dashboard' && $method === 'GET') {
 
 if ($path === '/racoes' && $method === 'POST') {
     $data = json_body();
-    $stmt = $pdo->prepare('INSERT INTO racoes (sku, nome, marca, variante, peso_kg, fornecedor, preco_venda, stock_minimo, ativo)
-                           VALUES (:sku, :nome, :marca, :variante, :peso_kg, :fornecedor, :preco_venda, :stock_minimo, :ativo)');
-    $stmt->execute([
-        ':sku' => $data['sku'] ?? '',
-        ':nome' => $data['nome'] ?? '',
-        ':marca' => $data['marca'] ?? '',
-        ':variante' => $data['variante'] ?? null,
-        ':peso_kg' => $data['pesoKg'] ?? 0,
-        ':fornecedor' => $data['fornecedor'] ?? null,
-        ':preco_venda' => $data['precoVenda'] ?? 0,
-        ':stock_minimo' => $data['stockMin'] ?? 0,
-        ':ativo' => $data['ativo'] ?? 'SIM',
-    ]);
-    respond(['status' => 'ok', 'id' => $pdo->lastInsertId()], 201);
+    try {
+        $stmt = $pdo->prepare('INSERT INTO racoes (sku, nome, marca, variante, peso_kg, fornecedor, preco_venda, stock_minimo, ativo)
+                               VALUES (:sku, :nome, :marca, :variante, :peso_kg, :fornecedor, :preco_venda, :stock_minimo, :ativo)');
+        $stmt->execute([
+            ':sku' => $data['sku'] ?? '',
+            ':nome' => $data['nome'] ?? '',
+            ':marca' => $data['marca'] ?? '',
+            ':variante' => $data['variante'] ?? null,
+            ':peso_kg' => $data['pesoKg'] ?? 0,
+            ':fornecedor' => $data['fornecedor'] ?? null,
+            ':preco_venda' => $data['precoVenda'] ?? 0,
+            ':stock_minimo' => $data['stockMin'] ?? 0,
+            ':ativo' => $data['ativo'] ?? 'SIM',
+        ]);
+        respond(['status' => 'ok', 'id' => $pdo->lastInsertId()], 201);
+    } catch (Throwable $e) {
+        respond(['error' => 'Nao foi possivel criar a racao', 'details' => $e->getMessage()], 400);
+    }
+}
+
+if ($parts[0] === 'racoes' && isset($parts[1]) && $method === 'PUT') {
+    $id = (int)$parts[1];
+    $data = json_body();
+    try {
+        $stmt = $pdo->prepare('UPDATE racoes SET sku = :sku, nome = :nome, marca = :marca, variante = :variante, peso_kg = :peso_kg,
+                               fornecedor = :fornecedor, preco_venda = :preco_venda, stock_minimo = :stock_minimo, ativo = :ativo
+                               WHERE id = :id');
+        $stmt->execute([
+            ':sku' => $data['sku'] ?? '',
+            ':nome' => $data['nome'] ?? '',
+            ':marca' => $data['marca'] ?? '',
+            ':variante' => $data['variante'] ?? null,
+            ':peso_kg' => $data['pesoKg'] ?? 0,
+            ':fornecedor' => $data['fornecedor'] ?? null,
+            ':preco_venda' => $data['precoVenda'] ?? 0,
+            ':stock_minimo' => $data['stockMin'] ?? 0,
+            ':ativo' => $data['ativo'] ?? 'SIM',
+            ':id' => $id,
+        ]);
+        respond(['status' => 'ok']);
+    } catch (Throwable $e) {
+        respond(['error' => 'Nao foi possivel atualizar a racao', 'details' => $e->getMessage()], 400);
+    }
+}
+
+if ($parts[0] === 'racoes' && isset($parts[1]) && $method === 'DELETE') {
+    $id = (int)$parts[1];
+    try {
+        $stmt = $pdo->prepare('DELETE FROM racoes WHERE id = :id');
+        $stmt->execute([':id' => $id]);
+        respond(['status' => 'ok']);
+    } catch (Throwable $e) {
+        respond(['error' => 'Nao foi possivel apagar a racao. Verifica se existem movimentos associados.', 'details' => $e->getMessage()], 400);
+    }
 }
 
 if ($path === '/movimentos' && $method === 'POST') {
@@ -114,20 +169,24 @@ if ($path === '/movimentos' && $method === 'POST') {
         respond(['error' => 'SKU inválido'], 400);
     }
 
-    $stmt = $pdo->prepare('INSERT INTO movimentos (data_movimento, tipo, motivo, racao_id, qtd_sacos, custo_unitario, preco_venda_unitario, observacoes)
-                           VALUES (:data_movimento, :tipo, :motivo, :racao_id, :qtd_sacos, :custo_unitario, :preco_venda_unitario, :observacoes)');
-    $stmt->execute([
-        ':data_movimento' => $data['data'] ?? date('Y-m-d'),
-        ':tipo' => $data['tipo'] ?? 'ENTRADA',
-        ':motivo' => $data['motivo'] ?? 'COMPRA',
-        ':racao_id' => $racao['id'],
-        ':qtd_sacos' => (int)($data['qtd'] ?? 0),
-        ':custo_unitario' => $data['custo'] ?? null,
-        ':preco_venda_unitario' => $data['precoVenda'] ?? null,
-        ':observacoes' => $data['observacoes'] ?? null,
-    ]);
+    try {
+        $stmt = $pdo->prepare('INSERT INTO movimentos (data_movimento, tipo, motivo, racao_id, qtd_sacos, custo_unitario, preco_venda_unitario, observacoes)
+                               VALUES (:data_movimento, :tipo, :motivo, :racao_id, :qtd_sacos, :custo_unitario, :preco_venda_unitario, :observacoes)');
+        $stmt->execute([
+            ':data_movimento' => $data['data'] ?? date('Y-m-d'),
+            ':tipo' => $data['tipo'] ?? 'ENTRADA',
+            ':motivo' => $data['motivo'] ?? 'COMPRA',
+            ':racao_id' => $racao['id'],
+            ':qtd_sacos' => (int)($data['qtd'] ?? 0),
+            ':custo_unitario' => $data['custo'] ?? null,
+            ':preco_venda_unitario' => $data['precoVenda'] ?? null,
+            ':observacoes' => $data['observacoes'] ?? null,
+        ]);
 
-    respond(['status' => 'ok', 'id' => $pdo->lastInsertId()], 201);
+        respond(['status' => 'ok', 'id' => $pdo->lastInsertId()], 201);
+    } catch (Throwable $e) {
+        respond(['error' => 'Nao foi possivel criar o movimento', 'details' => $e->getMessage()], 400);
+    }
 }
 
 respond(['error' => 'Endpoint não encontrado'], 404);

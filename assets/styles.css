@@ -183,9 +183,12 @@ p {
   font-size: 0.92rem;
 }
 
-#restock-table .table__row,
+#restock-table .table__row {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 #racoes-table .table__row {
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(8, minmax(0, 1fr));
 }
 
 #movimentos-table .table__row {
@@ -233,6 +236,17 @@ p {
 .btn--icon {
   background: transparent;
   font-size: 1rem;
+}
+
+.btn--sm {
+  padding: 6px 10px;
+  font-size: 0.78rem;
+}
+
+.actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .btn:hover {
