@@ -15,11 +15,12 @@
     <div class="container hero__content">
       <div>
         <p class="eyebrow">Gestão simples de stock e movimentos</p>
-        <h1>Controlo de Rações</h1>
-        <p class="lead">Uma interface web leve para gerir rações, movimentos e indicadores-chave em tempo real.</p>
         <div class="hero__actions">
+          <button class="btn btn--primary" data-action="quick-mov">Novo movimento</button>
+          <button class="btn btn--ghost" data-action="quick-racao">Nova ração</button>
           <button class="btn btn--primary" data-scroll="#dashboard">Ver dashboard</button>
           <button class="btn btn--ghost" data-scroll="#movimentos">Registar movimento</button>
+          <button class="btn btn--ghost" data-scroll="#racoes">Ver rações</button>
         </div>
       </div>
       <div class="hero__card">
@@ -47,8 +48,12 @@
           <p class="eyebrow">Resumo</p>
           <h2>Dashboard</h2>
         </div>
-        <div class="pill">Atualização: <span id="last-updated">--</span></div>
+        <div class="section__actions">
+          <div class="pill">Atualização: <span id="last-updated">--</span></div>
+          <button class="btn btn--ghost btn--sm section__toggle" data-target="#dashboard">Minimizar</button>
+        </div>
       </div>
+      <div class="section__content">
       <div class="filters">
         <div class="field">
           <label for="filtro-dashboard-de">De</label>
@@ -111,6 +116,7 @@
           </div>
         </div>
       </div>
+      </div>
     </section>
 
     <section id="racoes" class="section">
@@ -119,8 +125,12 @@
           <p class="eyebrow">Catálogo</p>
           <h2>Rações</h2>
         </div>
-        <button class="btn btn--primary" id="btn-nova-racao">Nova ração</button>
+        <div class="section__actions">
+          <button class="btn btn--primary" id="btn-nova-racao">Nova ração</button>
+          <button class="btn btn--ghost btn--sm section__toggle" data-target="#racoes">Minimizar</button>
+        </div>
       </div>
+      <div class="section__content">
       <div class="filters">
         <div class="field">
           <label for="filtro-racoes-texto">Pesquisa (SKU ou nome)</label>
@@ -141,6 +151,7 @@
           </div>
         </div>
       </div>
+      </div>
     </section>
 
     <section id="movimentos" class="section">
@@ -149,8 +160,12 @@
           <p class="eyebrow">Operações</p>
           <h2>Movimentos</h2>
         </div>
-        <button class="btn btn--ghost" id="btn-novo-movimento">Novo movimento</button>
+        <div class="section__actions">
+          <button class="btn btn--ghost" id="btn-novo-movimento">Novo movimento</button>
+          <button class="btn btn--ghost btn--sm section__toggle" data-target="#movimentos">Minimizar</button>
+        </div>
       </div>
+      <div class="section__content">
       <div class="filters">
         <div class="field">
           <label for="filtro-movimentos-texto">Pesquisa (SKU ou produto)</label>
@@ -196,6 +211,12 @@
             <span>Ações</span>
           </div>
         </div>
+        <div class="pagination" id="movimentos-pagination">
+          <button class="btn btn--ghost btn--sm" id="mov-page-prev">Anterior</button>
+          <span id="mov-page-info">Página 1</span>
+          <button class="btn btn--ghost btn--sm" id="mov-page-next">Seguinte</button>
+        </div>
+      </div>
       </div>
     </section>
   </main>

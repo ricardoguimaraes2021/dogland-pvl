@@ -124,6 +124,17 @@ p {
   margin-bottom: 20px;
 }
 
+.section__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.section__content.is-collapsed {
+  display: none;
+}
+
 .cards {
   display: grid;
   gap: 18px;
@@ -254,6 +265,16 @@ p {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 12px;
+  font-size: 0.85rem;
+  color: var(--muted);
 }
 
 .btn:hover {

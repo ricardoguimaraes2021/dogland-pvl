@@ -8,6 +8,8 @@ const state = {
     lucro: 0,
     lastUpdated: null,
   },
+  movPage: 1,
+  movPageSize: 10,
 };
 
 const API_BASE = "https://dimgrey-cattle-295935.hostingersite.com/api";
@@ -58,6 +60,9 @@ const ui = {
   btnDashMes: byId("btn-dashboard-mes"),
   btnDashLimpar: byId("btn-dashboard-limpar"),
   cardConsumoHint: byId("card-consumo-hint"),
+  movPagePrev: byId("mov-page-prev"),
+  movPageNext: byId("mov-page-next"),
+  movPageInfo: byId("mov-page-info"),
 };
 
 const sampleData = {
@@ -247,7 +252,8 @@ function render() {
   renderTable(ui.restockTable, restock, restockRow);
   renderTable(ui.stockTable, getStockList(), stockRow);
   renderTable(ui.racoesTable, getFilteredRacoes(), racaoRow);
-  renderTable(ui.movimentosTable, getFilteredMovimentos(), movimentoRow);
+  renderTable(ui.movimentosTable, getPagedMovimentos(), movimentoRow);
+  updateMovPagination();
 }
 
 function getStockList() {
@@ -320,6 +326,22 @@ function getFilteredMovimentos() {
 
     return true;
   });
+}
+
+function getPagedMovimentos() {
+  const list = getFilteredMovimentos();
+  const start = (state.movPage - 1) * state.movPageSize;
+  return list.slice(start, start + state.movPageSize);
+}
+
+function updateMovPagination() {
+  if (!ui.movPageInfo) return;
+  const total = getFilteredMovimentos().length;
+  const totalPages = Math.max(1, Math.ceil(total / state.movPageSize));
+  if (state.movPage > totalPages) state.movPage = totalPages;
+  ui.movPageInfo.textContent = `Página ${state.movPage} de ${totalPages}`;
+  if (ui.movPagePrev) ui.movPagePrev.disabled = state.movPage <= 1;
+  if (ui.movPageNext) ui.movPageNext.disabled = state.movPage >= totalPages;
 }
 
 function openModal(title, fields, onSubmit) {
@@ -406,8 +428,14 @@ const filterInputs = [
 ];
 filterInputs.forEach((input) => {
   if (!input) return;
-  input.addEventListener("input", () => render());
-  input.addEventListener("change", () => render());
+  input.addEventListener("input", () => {
+    state.movPage = 1;
+    render();
+  });
+  input.addEventListener("change", () => {
+    state.movPage = 1;
+    render();
+  });
 });
 
 if (ui.btnDashMes) {
@@ -425,9 +453,43 @@ if (ui.btnDashLimpar) {
   ui.btnDashLimpar.addEventListener("click", () => {
     if (ui.filtroDashDe) ui.filtroDashDe.value = "";
     if (ui.filtroDashAte) ui.filtroDashAte.value = "";
+    state.movPage = 1;
     render();
   });
 }
+
+if (ui.movPagePrev) {
+  ui.movPagePrev.addEventListener("click", () => {
+    state.movPage = Math.max(1, state.movPage - 1);
+    render();
+  });
+}
+
+if (ui.movPageNext) {
+  ui.movPageNext.addEventListener("click", () => {
+    state.movPage += 1;
+    render();
+  });
+}
+
+document.querySelectorAll(".section__toggle").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const target = document.querySelector(btn.dataset.target);
+    if (!target) return;
+    const content = target.querySelector(".section__content");
+    if (!content) return;
+    const collapsed = content.classList.toggle("is-collapsed");
+    btn.textContent = collapsed ? "Expandir" : "Minimizar";
+  });
+});
+
+document.querySelectorAll("[data-action]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const action = btn.dataset.action;
+    if (action === "quick-mov" && ui.btnNovoMovimento) ui.btnNovoMovimento.click();
+    if (action === "quick-racao" && ui.btnNovaRacao) ui.btnNovaRacao.click();
+  });
+});
 
 ui.btnNovaRacao.addEventListener("click", () => {
   openModal("Nova ração", [
