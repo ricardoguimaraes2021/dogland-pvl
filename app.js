@@ -10,7 +10,7 @@ const state = {
   },
 };
 
-const API_BASE = ""; // Ex: "https://seudominio.com/api"
+const API_BASE = "https://dimgrey-cattle-295935.hostingersite.com/api";
 
 const fmtCurrency = new Intl.NumberFormat("pt-PT", {
   style: "currency",
