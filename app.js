@@ -242,6 +242,7 @@ function openModal(title, fields, onSubmit) {
       }
     }
     if (field.step && field.type === "number") input.step = field.step;
+    if (field.readonly) input.readOnly = true;
     if (field.options) {
       field.options.forEach((opt) => {
         const option = document.createElement("option");
@@ -252,6 +253,9 @@ function openModal(title, fields, onSubmit) {
     }
     if (field.value !== undefined) {
       input.value = field.value;
+    }
+    if (field.onChange && input.addEventListener) {
+      input.addEventListener("change", (event) => field.onChange(event, input));
     }
     wrapper.appendChild(label);
     wrapper.appendChild(input);
@@ -333,18 +337,31 @@ ui.btnNovaRacao.addEventListener("click", () => {
 });
 
 ui.btnNovoMovimento.addEventListener("click", () => {
+  const produtoOptions = state.racoes.map((r) => `${r.sku} — ${r.nome}`);
   openModal("Novo movimento", [
     { label: "Data", name: "data", type: "date" },
     { label: "Tipo", name: "tipo", type: "select", options: ["ENTRADA", "SAÍDA"] },
     { label: "Motivo", name: "motivo", type: "select", options: ["COMPRA", "VENDA", "CONSUMO_CASA", "AJUSTE"] },
-    { label: "SKU", name: "sku" },
+    {
+      label: "Produto",
+      name: "produto",
+      type: "select",
+      options: ["Selecione...", ...produtoOptions],
+      onChange: (event) => {
+        const value = event.target.value || "";
+        const sku = value.includes("—") ? value.split("—")[0].trim() : "";
+        const skuInput = ui.modalBody.querySelector('[name="sku"]');
+        if (skuInput) skuInput.value = sku;
+      },
+    },
+    { label: "SKU", name: "sku", readonly: true },
     { label: "Quantidade", name: "qtd", type: "number" },
     { label: "Custo unitário (€)", name: "custo", type: "decimal", required: false },
     { label: "Preço venda (€)", name: "precoVenda", type: "decimal", required: false },
     { label: "Observações", name: "observacoes", required: false },
   ], (data) => {
     if (!data.data || !data.sku || !data.qtd) {
-      alert("Preenche Data, SKU e Quantidade.");
+      alert("Preenche Data, Produto e Quantidade.");
       return;
     }
     if (Number(data.qtd) <= 0) {
@@ -457,11 +474,30 @@ ui.movimentosTable.addEventListener("click", (event) => {
   }
 
   if (action === "edit-mov") {
+    const produtoOptions = state.racoes.map((r) => `${r.sku} — ${r.nome}`);
+    const nomeAtual = state.racoes.find((r) => r.sku === movimento.sku)?.nome;
+    const currentProduto = movimento.sku && nomeAtual
+      ? `${movimento.sku} — ${nomeAtual}`
+      : "Selecione...";
+    const options = currentProduto === "Selecione..." ? ["Selecione...", ...produtoOptions] : [currentProduto, ...produtoOptions];
     openModal("Editar movimento", [
       { label: "Data", name: "data", type: "date", value: movimento.data },
       { label: "Tipo", name: "tipo", type: "select", options: ["ENTRADA", "SAÍDA"], value: movimento.tipo },
       { label: "Motivo", name: "motivo", type: "select", options: ["COMPRA", "VENDA", "CONSUMO_CASA", "AJUSTE"], value: movimento.motivo },
-      { label: "SKU", name: "sku", value: movimento.sku },
+      {
+        label: "Produto",
+        name: "produto",
+        type: "select",
+        options,
+        value: currentProduto,
+        onChange: (event) => {
+          const value = event.target.value || "";
+          const sku = value.includes("—") ? value.split("—")[0].trim() : "";
+          const skuInput = ui.modalBody.querySelector('[name="sku"]');
+          if (skuInput) skuInput.value = sku;
+        },
+      },
+      { label: "SKU", name: "sku", value: movimento.sku, readonly: true },
       { label: "Quantidade", name: "qtd", type: "number", value: movimento.qtd },
       { label: "Custo unitário (€)", name: "custo", type: "decimal", required: false, value: movimento.custo ?? "" },
       { label: "Preço venda (€)", name: "precoVenda", type: "decimal", required: false, value: movimento.precoVenda ?? "" },
