@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Controlo de Rações</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body>
+  <header class="hero">
+    <div class="hero__glass"></div>
+    <div class="container hero__content">
+      <div>
+        <p class="eyebrow">Gestão simples de stock e movimentos</p>
+        <h1>Controlo de Rações</h1>
+        <p class="lead">Uma interface web leve para gerir rações, movimentos e indicadores-chave em tempo real.</p>
+        <div class="hero__actions">
+          <button class="btn btn--primary" data-scroll="#dashboard">Ver dashboard</button>
+          <button class="btn btn--ghost" data-scroll="#movimentos">Registar movimento</button>
+        </div>
+      </div>
+      <div class="hero__card">
+        <div class="stat">
+          <span class="stat__label">Valor em stock</span>
+          <strong class="stat__value" id="kpi-valor-stock">€0,00</strong>
+        </div>
+        <div class="stat">
+          <span class="stat__label">Total vendas</span>
+          <strong class="stat__value" id="kpi-total-vendas">€0,00</strong>
+        </div>
+        <div class="stat">
+          <span class="stat__label">Lucro estimado</span>
+          <strong class="stat__value" id="kpi-lucro">€0,00</strong>
+        </div>
+        <p class="muted">Dados demonstrativos. Configure o backend para valores reais.</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section id="dashboard" class="section">
+      <div class="section__header">
+        <div>
+          <p class="eyebrow">Resumo</p>
+          <h2>Dashboard</h2>
+        </div>
+        <div class="pill">Atualização: <span id="last-updated">--</span></div>
+      </div>
+      <div class="cards">
+        <article class="card">
+          <h3>Valor em Stock</h3>
+          <p class="card__value" id="card-valor-stock">€0,00</p>
+          <span class="card__hint">Baseado no custo médio</span>
+        </article>
+        <article class="card">
+          <h3>Total Compras (Inbound)</h3>
+          <p class="card__value" id="card-total-compras">€0,00</p>
+          <span class="card__hint">Somatório de compras</span>
+        </article>
+        <article class="card">
+          <h3>Total Vendas (Outbound)</h3>
+          <p class="card__value" id="card-total-vendas">€0,00</p>
+          <span class="card__hint">Somatório de vendas</span>
+        </article>
+        <article class="card">
+          <h3>Lucro Estimado</h3>
+          <p class="card__value" id="card-lucro">€0,00</p>
+          <span class="card__hint">Receitas - custos</span>
+        </article>
+      </div>
+      <div class="panel">
+        <div class="panel__header">
+          <h3>Produtos a Repor</h3>
+          <span class="panel__hint">Stock atual ≤ stock mínimo</span>
+        </div>
+        <div class="table" id="restock-table">
+          <div class="table__row table__row--header">
+            <span>SKU</span>
+            <span>Produto</span>
+            <span>Stock atual</span>
+            <span>Stock mínimo</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="racoes" class="section">
+      <div class="section__header">
+        <div>
+          <p class="eyebrow">Catálogo</p>
+          <h2>Rações</h2>
+        </div>
+        <button class="btn btn--primary" id="btn-nova-racao">Nova ração</button>
+      </div>
+      <div class="panel">
+        <div class="table" id="racoes-table">
+          <div class="table__row table__row--header">
+            <span>SKU</span>
+            <span>Produto</span>
+            <span>Marca</span>
+            <span>Peso</span>
+            <span>Preço venda</span>
+            <span>Stock atual</span>
+            <span>Alerta</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="movimentos" class="section">
+      <div class="section__header">
+        <div>
+          <p class="eyebrow">Operações</p>
+          <h2>Movimentos</h2>
+        </div>
+        <button class="btn btn--ghost" id="btn-novo-movimento">Novo movimento</button>
+      </div>
+      <div class="panel">
+        <div class="table" id="movimentos-table">
+          <div class="table__row table__row--header">
+            <span>Data</span>
+            <span>Tipo</span>
+            <span>Motivo</span>
+            <span>SKU</span>
+            <span>Qtd</span>
+            <span>Custo</span>
+            <span>Preço venda</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="modal" id="modal-form">
+    <div class="modal__content">
+      <div class="modal__header">
+        <h3 id="modal-title">Novo registo</h3>
+        <button class="btn btn--icon" id="modal-close">✕</button>
+      </div>
+      <form id="modal-body"></form>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="container">
+      <p>© 2026 Controlo de Rações — Interface web.</p>
+      <p class="muted">Para dados reais, configure o backend MySQL e a API.</p>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
