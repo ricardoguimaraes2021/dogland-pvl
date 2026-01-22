@@ -35,8 +35,7 @@ const ui = {
   lucro: byId("kpi-lucro"),
   cardValorStock: byId("card-valor-stock"),
   cardTotalCompras: byId("card-total-compras"),
-  cardTotalVendas: byId("card-total-vendas"),
-  cardLucro: byId("card-lucro"),
+  cardConsumo: byId("card-consumo"),
   lastUpdated: byId("last-updated"),
   restockTable: byId("restock-table"),
   racoesTable: byId("racoes-table"),
@@ -83,8 +82,7 @@ function setMetrics(metrics) {
   ui.lucro.textContent = fmtCurrency.format(metrics.lucro || 0);
   ui.cardValorStock.textContent = fmtCurrency.format(metrics.valorStock || 0);
   ui.cardTotalCompras.textContent = fmtCurrency.format(metrics.totalCompras || 0);
-  ui.cardTotalVendas.textContent = fmtCurrency.format(metrics.totalVendas || 0);
-  ui.cardLucro.textContent = fmtCurrency.format(metrics.lucro || 0);
+  ui.cardConsumo.textContent = `${metrics.consumoQtd || 0} sacos`;
   ui.lastUpdated.textContent = metrics.lastUpdated ? fmtDate(metrics.lastUpdated) : "--";
 }
 
@@ -207,6 +205,8 @@ async function loadData() {
       totalCompras: Number(metrics.total_compras || 0),
       totalVendas: Number(metrics.total_vendas || 0),
       lucro: Number(metrics.lucro_estimado || 0),
+      consumoQtd: Number(metrics.consumo_qtd || 0),
+      consumoCusto: Number(metrics.consumo_custo || 0),
       lastUpdated: metrics.last_updated,
     };
   } catch (err) {

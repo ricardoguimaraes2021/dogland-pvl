@@ -111,9 +111,19 @@ SELECT
       WHERE m.tipo = 'ENTRADA' AND m.motivo = 'COMPRA'
   ), 0) AS total_compras,
   COALESCE((
+      SELECT SUM(m.qtd_sacos)
+      FROM movimentos m
+      WHERE m.tipo = 'SAÍDA' AND m.motivo IN ('VENDA','CONSUMO_CASA')
+  ), 0) AS consumo_qtd,
+  COALESCE((
       SELECT SUM(m.qtd_sacos * m.preco_venda_unitario)
       FROM movimentos m
       WHERE m.tipo = 'SAÍDA' AND m.motivo = 'VENDA'
   ), 0) AS total_vendas,
+  COALESCE((
+      SELECT SUM(m.qtd_sacos * m.custo_unitario)
+      FROM movimentos m
+      WHERE m.tipo = 'SAÍDA' AND m.motivo IN ('VENDA','CONSUMO_CASA')
+  ), 0) AS consumo_custo,
   COALESCE(SUM(vr.lucro_total), 0) AS lucro_estimado
 FROM vw_racoes_metricas vr;
