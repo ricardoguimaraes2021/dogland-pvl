@@ -142,9 +142,35 @@ async function loadData() {
       fetch(`${API_BASE}/movimentos`).then((r) => r.json()),
       fetch(`${API_BASE}/dashboard`).then((r) => r.json()),
     ]);
-    state.racoes = racoes;
-    state.movimentos = movimentos;
-    state.metrics = metrics;
+
+    state.racoes = racoes.map((r) => ({
+      sku: r.sku,
+      nome: r.nome,
+      marca: r.marca,
+      pesoKg: r.peso_kg,
+      precoVenda: r.preco_venda,
+      stockMin: r.stock_minimo,
+      stockAtual: r.stock_atual,
+      alerta: r.alerta,
+    }));
+
+    state.movimentos = movimentos.map((m) => ({
+      data: m.data_movimento,
+      tipo: m.tipo,
+      motivo: m.motivo,
+      sku: m.sku,
+      qtd: m.qtd_sacos,
+      custo: m.custo_unitario,
+      precoVenda: m.preco_venda_unitario,
+    }));
+
+    state.metrics = {
+      valorStock: metrics.valor_em_stock,
+      totalCompras: metrics.total_compras,
+      totalVendas: metrics.total_vendas,
+      lucro: metrics.lucro_estimado,
+      lastUpdated: metrics.last_updated,
+    };
   } catch (err) {
     console.error("Falha ao carregar API, usando dados locais", err);
     state.racoes = sampleData.racoes;

@@ -1,33 +1,37 @@
 # Controlo de Rações — Website
 
-Este diretório contém uma versão web simples para gerir o processo de controlo de rações.
+Website simples para gestão de rações, movimentos e dashboard. Inclui schema MySQL e uma API PHP leve.
 
 ## Estrutura
 - `index.html` — Interface principal.
 - `assets/styles.css` — Estilos.
-- `app.js` — Lógica frontend (com dados de exemplo quando não existe API).
-- `db/schema.sql` — Esquema MySQL coerente com as regras de negócio.
+- `app.js` — Lógica frontend (usa API se configurada).
+- `db/schema.sql` — Esquema MySQL com views das métricas.
 - `db/seed.sql` — Dados de exemplo.
+- `api/` — API PHP (GET/POST para racoes, movimentos e dashboard).
 
-## Como usar (local)
-1) Abrir `index.html` no browser.
-2) Para dados reais, configurar um backend/API que exponha:
-   - `GET /racoes`
-   - `GET /movimentos`
-   - `GET /dashboard`
-   - `POST /racoes`
-   - `POST /movimentos`
+## Instalação (Hostinger)
+1) Importa `db/schema.sql` na tua base de dados.
+2) (Opcional) Importa `db/seed.sql` para dados de teste.
+3) Cria `api/config.php` com os dados reais de ligação (usa `api/config.sample.php` como base).
+4) Em `app.js`, define `API_BASE` com o URL da API. Exemplo:
+   - `https://teu-dominio.com/api`
 
-No ficheiro `app.js`, definir `API_BASE` com o endereço da tua API.
+## Endpoints
+- `GET /api/health`
+- `GET /api/racoes`
+- `GET /api/movimentos`
+- `GET /api/dashboard`
+- `POST /api/racoes`
+- `POST /api/movimentos`
 
-## Regras de negócio suportadas no esquema
+## Regras de negócio (principais)
 - Stock atual = Entradas – Saídas
 - Custo médio = média ponderada de compras
 - Valor em stock = stock atual * custo médio
 - Lucro = receitas de vendas – custo das vendas
 - Alerta = stock atual <= stock mínimo
 
-## Próximos passos sugeridos
-- Criar endpoints PHP (ou Node) na Hostinger para CRUD.
-- Proteger API com autenticação básica.
-- Adicionar paginação/filtros para movimentos.
+## Segurança
+- `api/config.php` está no `.gitignore` e não deve ser enviado para o GitHub.
+- Para produção, recomenda-se restringir CORS e adicionar autenticação.
