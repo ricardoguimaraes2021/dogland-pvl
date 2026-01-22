@@ -52,6 +52,11 @@ const ui = {
   filtroMovMotivo: byId("filtro-movimentos-motivo"),
   filtroMovDe: byId("filtro-movimentos-de"),
   filtroMovAte: byId("filtro-movimentos-ate"),
+  filtroDashDe: byId("filtro-dashboard-de"),
+  filtroDashAte: byId("filtro-dashboard-ate"),
+  btnDashMes: byId("btn-dashboard-mes"),
+  btnDashLimpar: byId("btn-dashboard-limpar"),
+  cardConsumoHint: byId("card-consumo-hint"),
 };
 
 const sampleData = {
@@ -83,6 +88,10 @@ function setMetrics(metrics) {
   ui.cardValorStock.textContent = fmtCurrency.format(metrics.valorStock || 0);
   ui.cardTotalCompras.textContent = fmtCurrency.format(metrics.totalCompras || 0);
   ui.cardConsumo.textContent = `${metrics.consumoQtd || 0} sacos`;
+  if (ui.cardConsumoHint) {
+    const custo = metrics.consumoCusto || 0;
+    ui.cardConsumoHint.textContent = `SAÍDA + VENDA/CONSUMO_CASA · ~${fmtCurrency.format(custo)}`;
+  }
   ui.lastUpdated.textContent = metrics.lastUpdated ? fmtDate(metrics.lastUpdated) : "--";
 }
 
@@ -186,6 +195,7 @@ async function loadData() {
       fornecedor: r.fornecedor || "",
       variante: r.variante || "",
       ativo: r.ativo,
+      custoMedio: r.custo_medio === null ? null : Number(r.custo_medio),
     }));
 
     state.movimentos = movimentos.map((m) => ({
@@ -220,11 +230,40 @@ async function loadData() {
 }
 
 function render() {
-  setMetrics(state.metrics);
+  setMetrics(getDashboardMetrics());
   const restock = state.racoes.filter((r) => r.alerta === "BAIXO");
   renderTable(ui.restockTable, restock, restockRow);
   renderTable(ui.racoesTable, getFilteredRacoes(), racaoRow);
   renderTable(ui.movimentosTable, getFilteredMovimentos(), movimentoRow);
+}
+
+function getDashboardMetrics() {
+  const base = { ...state.metrics };
+  const de = ui.filtroDashDe?.value ? new Date(ui.filtroDashDe.value) : null;
+  const ate = ui.filtroDashAte?.value ? new Date(ui.filtroDashAte.value) : null;
+
+  const consumoMovs = state.movimentos.filter((m) => {
+    if (m.tipo !== "SAÍDA") return false;
+    if (!(m.motivo === "VENDA" || m.motivo === "CONSUMO_CASA")) return false;
+    if (de || ate) {
+      const data = new Date(m.data);
+      if (de && data < de) return false;
+      if (ate && data > ate) return false;
+    }
+    return true;
+  });
+
+  const consumoQtd = consumoMovs.reduce((acc, m) => acc + (Number(m.qtd) || 0), 0);
+  const consumoCusto = consumoMovs.reduce((acc, m) => {
+    const custo = state.racoes.find((r) => r.sku === m.sku)?.custoMedio || 0;
+    return acc + (Number(m.qtd) || 0) * custo;
+  }, 0);
+
+  return {
+    ...base,
+    consumoQtd,
+    consumoCusto,
+  };
 }
 
 function getFilteredRacoes() {
@@ -343,12 +382,33 @@ const filterInputs = [
   ui.filtroMovMotivo,
   ui.filtroMovDe,
   ui.filtroMovAte,
+  ui.filtroDashDe,
+  ui.filtroDashAte,
 ];
 filterInputs.forEach((input) => {
   if (!input) return;
   input.addEventListener("input", () => render());
   input.addEventListener("change", () => render());
 });
+
+if (ui.btnDashMes) {
+  ui.btnDashMes.addEventListener("click", () => {
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    if (ui.filtroDashDe) ui.filtroDashDe.valueAsDate = firstDay;
+    if (ui.filtroDashAte) ui.filtroDashAte.valueAsDate = lastDay;
+    render();
+  });
+}
+
+if (ui.btnDashLimpar) {
+  ui.btnDashLimpar.addEventListener("click", () => {
+    if (ui.filtroDashDe) ui.filtroDashDe.value = "";
+    if (ui.filtroDashAte) ui.filtroDashAte.value = "";
+    render();
+  });
+}
 
 ui.btnNovaRacao.addEventListener("click", () => {
   openModal("Nova ração", [

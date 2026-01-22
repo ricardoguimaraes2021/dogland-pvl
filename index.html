@@ -49,6 +49,24 @@
         </div>
         <div class="pill">Atualização: <span id="last-updated">--</span></div>
       </div>
+      <div class="filters">
+        <div class="field">
+          <label for="filtro-dashboard-de">De</label>
+          <input id="filtro-dashboard-de" type="date" />
+        </div>
+        <div class="field">
+          <label for="filtro-dashboard-ate">Até</label>
+          <input id="filtro-dashboard-ate" type="date" />
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <button class="btn btn--ghost" id="btn-dashboard-mes">Este mês</button>
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <button class="btn btn--ghost" id="btn-dashboard-limpar">Limpar período</button>
+        </div>
+      </div>
       <div class="cards">
         <article class="card">
           <h3>Valor em Stock</h3>
@@ -63,7 +81,7 @@
         <article class="card">
           <h3>Consumo no Período</h3>
           <p class="card__value" id="card-consumo">0 sacos</p>
-          <span class="card__hint">SAÍDA + VENDA/CONSUMO_CASA</span>
+          <span class="card__hint" id="card-consumo-hint">SAÍDA + VENDA/CONSUMO_CASA</span>
         </article>
         <article class="card">
           <h3>Valor em Stock</h3>
